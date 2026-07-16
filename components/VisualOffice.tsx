@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AlertTriangle, BarChart3, Bell, Bot, BriefcaseBusiness, Building2, Check, ChevronRight,
+  AlertTriangle, BarChart3, Bell, BookOpen, Bot, BriefcaseBusiness, Building2, Check, ChevronRight,
   ClipboardList, Clock3, FileUser, GitCompareArrows, HeartHandshake, Lightbulb, Mail,
   Map, MessageCircleMore, Network, Phone, Search, Send, Settings, Sparkles, Target,
   UserRoundSearch, UsersRound, X,
@@ -12,14 +12,17 @@ import { officeActions, officeAgents, officeAlerts, officeStatusBadges } from "@
 import type { OfficeAgent, OfficeAgentStatus } from "@/types/office";
 import { useOfficeDemo } from "@/hooks/useOfficeDemo";
 import { DemoControls, DemoResult, DemoStart } from "./OfficeDemo";
+import FirstVisitGuide from "./FirstVisitGuide";
+
+const ONBOARDING_STORAGE_KEY = "ses-ai-office-onboarding-seen";
 import s from "./VisualOffice.module.css";
 
 function OfficeNavigation() {
   return <Link className={s.dashboardLink} href="/dashboard"><BarChart3 size={16} />管理ダッシュボードを見る<ChevronRight size={15} /></Link>;
 }
 
-function OfficeHeader() {
-  return <header className={s.header}><div className={s.brand}><div className={s.brandMark}><Sparkles size={20} /></div><div><strong>SES AI Office</strong><span>営業・採用・マッチングをAI社員と動かす</span></div></div><div className={s.headerMeta}><div className={s.date}><span>2026年7月16日 木曜日</span><b>18:30</b></div><span className={s.live}><i />AI社員 7名 稼働中</span><span className={s.checkCount}><AlertTriangle size={14} />要確認 7件</span><OfficeNavigation /><button className={s.iconButton} aria-label="通知"><Bell size={18} /></button><button className={s.iconButton} aria-label="設定"><Settings size={18} /></button><div className={s.user}><span>さ</span><b>さとちゃん</b></div></div></header>;
+function OfficeHeader({ onGuide }: { onGuide: () => void }) {
+  return <header className={s.header}><div className={s.brand}><div className={s.brandMark}><Sparkles size={20} /></div><div><strong>SES AI Office</strong><span>営業・採用・マッチングをAI社員と動かす</span></div></div><div className={s.headerMeta}><div className={s.date}><span>2026年7月16日 木曜日</span><b>18:30</b></div><span className={s.live}><i />AI社員 7名 稼働中</span><span className={s.checkCount}><AlertTriangle size={14} />要確認 7件</span><OfficeNavigation /><button className={s.guideButton} onClick={onGuide} aria-label="初回操作ガイドを開く"><BookOpen size={15} /><span>ガイドを見る</span></button><button className={s.iconButton} aria-label="通知"><Bell size={18} /></button><button className={s.iconButton} aria-label="設定"><Settings size={18} /></button><div className={s.user}><span>さ</span><b>さとちゃん</b></div></div></header>;
 }
 
 function AgentStatus({ status }: { status: OfficeAgentStatus }) {
@@ -110,13 +113,16 @@ function Toast({ message }: { message: string }) {
 
 export default function VisualOffice() {
   const [selected, setSelected] = useState<OfficeAgent | null>(null); const [speeches, setSpeeches] = useState<Record<string, string>>({}); const [histories, setHistories] = useState<Record<string, string[]>>({}); const [toast, setToast] = useState("");
+  const [guideOpen, setGuideOpen] = useState(false);
   const instructionTimer = useRef<number | null>(null);
   const demo = useOfficeDemo();
   const selectedSpeech = selected ? speeches[selected.id] ?? selected.speech : ""; const selectedHistory = useMemo(() => selected ? histories[selected.id] ?? selected.history : [], [histories, selected]);
   const demoAgents = officeAgents.map(agent => ({ ...agent, status: demo.step?.statuses[agent.id] ?? agent.status, speech: demo.step?.speeches[agent.id] ?? speeches[agent.id] ?? agent.speech, currentTask: demo.step?.agentIds.includes(agent.id) ? demo.step.process : agent.currentTask, progress: agent.id === "matching" && demo.step?.id === 3 ? demo.matchingProgress : agent.progress }));
   const demoBadges = demo.step ? [`新着案件 ${demo.step.id >= 1 ? 19 : 18}`, `提案候補 ${demo.step.id >= 4 ? 10 : 7}`, `提案中 ${demo.status === "completed" ? 28 : 27}`, "面談予定 14", "要フォロー 6"] : officeStatusBadges;
   useEffect(() => { if (!toast) return; const timer = window.setTimeout(() => setToast(""), 3000); return () => window.clearTimeout(timer); }, [toast]);
+  useEffect(() => { if (localStorage.getItem(ONBOARDING_STORAGE_KEY) !== "seen") setGuideOpen(true); }, []);
+  const closeGuide = useCallback(() => { localStorage.setItem(ONBOARDING_STORAGE_KEY, "seen"); setGuideOpen(false); }, []);
   useEffect(() => () => { if (instructionTimer.current !== null) window.clearTimeout(instructionTimer.current); }, []);
   const runInstruction = (command: string) => { if (!selected) return; const id = selected.id; if (instructionTimer.current !== null) window.clearTimeout(instructionTimer.current); setSpeeches(prev => ({ ...prev, [id]: "新しい指示を実行しています…" })); setHistories(prev => ({ ...prev, [id]: [`指示を受付：${command}`, ...(prev[id] ?? selected.history)] })); setToast(`${selected.name}が指示を受け付けました`); instructionTimer.current = window.setTimeout(() => { setSpeeches(prev => ({ ...prev, [id]: `${command.slice(0, 18)}${command.length > 18 ? "…" : ""}を完了しました` })); setToast(`${selected.name}の処理が完了しました`); instructionTimer.current = null; }, 1800); };
-  return <div className={`${s.officePage} ${demo.step ? s.demoRunning : ""}`}><OfficeHeader /><main className={s.officeMain}><div className={s.statusStrip}>{demoBadges.map((badge, i) => <span key={badge}><i className={s[`stripDot${i}`]} />{badge}</span>)}</div><div className={s.officeIntro}><div><span className={s.eyebrow}><Building2 size={13} />LIVE OFFICE VIEW</span><h1>AI社員が、今日の営業を動かしています</h1><p>部屋を選ぶと、現在の仕事と成果を確認して直接指示できます。</p></div>{demo.status === "idle" ? <DemoStart onStart={demo.begin} speed={demo.speed} onSpeed={demo.setSpeed} /> : <span className={s.updated}><Clock3 size={13} />18:30 更新</span>}</div><div className={s.officeStage}><PriorityActions /><OfficeBuilding agents={demoAgents} onSelect={setSelected} activeIds={demo.step?.agentIds ?? []} matchingProgress={demo.matchingProgress} /><AlertPanel /></div><div className={s.mobileHint}><Bot size={14} />部屋カードをタップしてAI社員に指示できます</div></main>{selected && <AgentDetailPanel agent={selected} speech={demo.step?.speeches[selected.id] ?? selectedSpeech} history={selectedHistory} onClose={() => setSelected(null)} onRun={runInstruction} />}{demo.step && demo.status !== "idle" && <DemoControls status={demo.status} step={demo.step} progress={demo.progress} matchingProgress={demo.matchingProgress} onPause={demo.pause} onResume={demo.resume} onStop={demo.stop} onRestart={demo.begin} />}{demo.resultOpen && <DemoResult logs={demo.logs} onClose={() => demo.setResultOpen(false)} onRestart={demo.begin} />}{toast && <Toast message={toast} />}</div>;
+  return <div className={`${s.officePage} ${demo.step ? s.demoRunning : ""}`}><OfficeHeader onGuide={() => setGuideOpen(true)} /><main className={s.officeMain}><div className={s.statusStrip}>{demoBadges.map((badge, i) => <span key={badge}><i className={s[`stripDot${i}`]} />{badge}</span>)}</div><div className={s.officeIntro}><div><span className={s.eyebrow}><Building2 size={13} />LIVE OFFICE VIEW</span><h1>AI社員が、今日の営業を動かしています</h1><p>部屋を選ぶと、現在の仕事と成果を確認して直接指示できます。</p></div>{demo.status === "idle" ? <DemoStart onStart={demo.begin} speed={demo.speed} onSpeed={demo.setSpeed} /> : <span className={s.updated}><Clock3 size={13} />18:30 更新</span>}</div><div className={s.officeStage}><PriorityActions /><OfficeBuilding agents={demoAgents} onSelect={setSelected} activeIds={demo.step?.agentIds ?? []} matchingProgress={demo.matchingProgress} /><AlertPanel /></div><div className={s.mobileHint}><Bot size={14} />部屋カードをタップしてAI社員に指示できます</div></main>{selected && <AgentDetailPanel agent={selected} speech={demo.step?.speeches[selected.id] ?? selectedSpeech} history={selectedHistory} onClose={() => setSelected(null)} onRun={runInstruction} />}{demo.step && demo.status !== "idle" && <DemoControls status={demo.status} step={demo.step} progress={demo.progress} matchingProgress={demo.matchingProgress} onPause={demo.pause} onResume={demo.resume} onStop={demo.stop} onRestart={demo.begin} />}{demo.resultOpen && <DemoResult logs={demo.logs} onClose={() => demo.setResultOpen(false)} onRestart={demo.begin} />}{guideOpen && <FirstVisitGuide open={guideOpen} onClose={closeGuide} />}{toast && <Toast message={toast} />}</div>;
 }
