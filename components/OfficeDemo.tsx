@@ -1,0 +1,19 @@
+"use client";
+
+import Link from "next/link";
+import { Check, FastForward, Pause, Play, RotateCcw, Square, X } from "lucide-react";
+import { demoCandidates, demoChecks, demoJob, demoRecommendation } from "@/data/demoScenario";
+import type { DemoSpeed, DemoStatus, DemoStep } from "@/types/demo";
+import s from "./VisualOffice.module.css";
+
+export function DemoStart({ onStart, speed, onSpeed }: { onStart: () => void; speed: DemoSpeed; onSpeed: (speed: DemoSpeed) => void }) {
+  return <div className={s.demoStart}><div><strong>新着案件から提案準備まで</strong><span>AI社員が連携して新着案件を提案準備まで進めます</span></div><label>速度<select value={speed} onChange={e => onSpeed(e.target.value as DemoSpeed)}><option value="normal">通常</option><option value="fast">高速</option></select></label><button onClick={onStart}><Play size={15} />デモを開始</button></div>;
+}
+
+export function DemoControls({ status, step, progress, matchingProgress, onPause, onResume, onStop, onRestart }: { status: DemoStatus; step: DemoStep; progress: number; matchingProgress: number; onPause: () => void; onResume: () => void; onStop: () => void; onRestart: () => void }) {
+  return <aside className={s.demoControls} aria-live="polite"><header><div><span>LIVE DEMO</span><strong>新着案件から提案準備まで</strong></div><b>{status === "paused" ? "一時停止中" : status === "completed" ? "完了" : "実行中"}</b></header><div className={s.demoStepLine}><strong>Step {step.id} / 7</strong><span>{step.title}</span><em>{progress}%</em></div><div className={s.demoProgress}><i style={{ width: `${progress}%` }} /></div><p><span>担当AI</span><b>{step.agentNames.join("・")}</b></p><p><span>現在の処理</span><b>{step.process}</b></p>{step.id === 3 && <div className={s.matchProgress}><FastForward size={13} />要員照合 {matchingProgress}%</div>}{step.id >= 4 && <div className={s.demoCandidateMini}>{demoCandidates.map(candidate => <span key={candidate.name}><b>{candidate.name}</b>{candidate.score}%</span>)}</div>}<footer>{status === "paused" ? <button onClick={onResume}><Play size={14} />再開</button> : status === "running" ? <button onClick={onPause}><Pause size={14} />一時停止</button> : null}<button onClick={onStop}><Square size={13} />停止</button><button onClick={onRestart}><RotateCcw size={14} />最初から</button></footer></aside>;
+}
+
+export function DemoResult({ logs, onClose, onRestart }: { logs: string[]; onClose: () => void; onRestart: () => void }) {
+  return <div className={s.demoBackdrop} onMouseDown={e => e.target === e.currentTarget && onClose()}><section className={s.demoResult} role="dialog" aria-modal="true" aria-labelledby="demo-result-title"><button className={s.demoClose} onClick={onClose} aria-label="デモ結果を閉じる"><X size={19} /></button><div className={s.demoSuccess}><Check size={22} /><div><span>DEMO COMPLETE</span><h2 id="demo-result-title">提案準備が完了しました</h2></div></div><div className={s.demoJob}><strong>{demoJob.name}</strong><span>{demoJob.skills}</span><p>{demoJob.workStyle} ・ {demoJob.rate} ・ {demoJob.start}開始 ・ {demoJob.openings}</p></div><h3>候補者3名</h3><div className={s.demoCandidates}>{demoCandidates.map((candidate, index) => <article key={candidate.name} className={index === 0 ? s.bestCandidate : ""}><header><strong>{index + 1}. {candidate.name}</strong><b>{candidate.score}%</b></header><p>Java {candidate.java} / Spring Boot {candidate.spring} / SQL {candidate.sql}</p><span>{candidate.verdict}</span><small>{candidate.caution}</small></article>)}</div><h3>最優先候補の推薦文</h3><blockquote>{demoRecommendation}</blockquote><h3>確認事項</h3><div className={s.demoChecks}>{demoChecks.map(item => <span key={item}>{item}</span>)}</div><details><summary>実行ログ概要（{logs.length}件）</summary><ol>{logs.map(log => <li key={log}>{log}</li>)}</ol></details><footer><Link href="/dashboard">管理ダッシュボードで確認</Link><button onClick={onRestart}><RotateCcw size={14} />もう一度実行</button><button onClick={onClose}>閉じる</button></footer></section></div>;
+}
