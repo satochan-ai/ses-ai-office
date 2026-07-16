@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SES AI Office Dashboard",
-  description: "SES営業・採用業務をAIで加速",
+  title: "SES AI Office",
+  description: "営業・採用・マッチングをAI社員と動かす",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -1,5 +1,5 @@
-import Dashboard from "@/components/Dashboard";
+import VisualOffice from "@/components/VisualOffice";
 
 export default function Home() {
-  return <Dashboard />;
+  return <VisualOffice />;
 }
