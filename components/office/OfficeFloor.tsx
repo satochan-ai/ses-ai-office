@@ -13,8 +13,9 @@ function ZoneFurniture({ type }: { type: OfficeAgent["decoration"] }) {
 
 export default function OfficeFloor({ floorId, agents, motions, activeIds, matchingProgress, handoffLabel, onSelect }: { floorId: "1f" | "2f"; agents: OfficeAgent[]; motions: Record<string, RoutedAgentMotion>; activeIds: string[]; matchingProgress: number; handoffLabel?: string; onSelect: (agent: OfficeAgent) => void }) {
   const visitedIds = new Set(Object.values(motions).map(motion => motion.interactionTarget).filter(Boolean));
+  const elevatorActive = Object.entries(motions).some(([agentId, motion]) => activeIds.includes(agentId) && motion.floorId === floorId && motion.inElevator);
   return <section className={`${s.floor} ${floorId === "2f" ? s.floorSecond : ""}`} aria-label={`SES AI Office ${floorId === "1f" ? "1階" : "2階"}フロア`}>
-    <div className={s.windows}><i /><i /><i /><i /></div><OfficePath floorId={floorId} />
+    <div className={s.windows}><i /><i /><i /><i /></div><OfficePath floorId={floorId} elevatorActive={elevatorActive} />
     {officeZones.filter(zone => zone.floorId === floorId).map(zone => <section key={zone.id} className={`${s.zone} ${s[`zone_${zone.id}`]}`} style={{ left: `${zone.x}%`, top: `${zone.y}%`, width: `${zone.width}%`, height: `${zone.height}%` }} aria-label={`${zone.label}エリア`}><header><strong>{zone.label}</strong><small>{zone.caption}</small></header><ZoneFurniture type={zone.id} /></section>)}
     <div className={s.handoff}><strong>{floorId === "1f" ? "情報受け渡し" : "資料確認"}</strong><span>{handoffLabel ?? "READY"}</span><i /></div>
     <div className={s.meeting}><span /><span /><strong>{floorId === "1f" ? "MEETING" : "SMALL MEETING"}</strong></div>

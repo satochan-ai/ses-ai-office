@@ -1,4 +1,4 @@
-export type OfficeAgentStatus = "稼働中" | "分析中" | "確認待ち" | "要対応" | "待機中" | "案件確認中" | "照合中" | "判断中" | "作成中" | "完了";
+export type OfficeAgentStatus = "稼働中" | "分析中" | "確認待ち" | "要対応" | "待機中" | "案件確認中" | "照合中" | "判断中" | "作成中" | "確認中" | "共有中" | "移動中" | "整理中" | "分類中" | "完了";
 
 export type OfficeAgent = {
   id: string;
