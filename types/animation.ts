@@ -17,5 +17,5 @@ export function animationForAgent(agent: OfficeAgent, stepId?: number, instructe
   if (complete) return "completed";
   if (stepId) return agentAnimationByStep[stepId]?.[agent.id] ?? "idle";
   if (!instructed) return "idle";
-  return agent.decoration === "analytics" ? "analyzing" : agent.decoration === "matching" ? "matching" : agent.decoration === "search" ? "calling" : agent.decoration === "strategy" || agent.decoration === "recruit" ? "typing" : agent.decoration === "follow" ? "reviewing" : "working";
+  return agent.decoration === "analytics" ? "analyzing" : agent.decoration === "matching" ? "matching" : agent.decoration === "search" ? "calling" : agent.decoration === "strategy" || agent.decoration === "recruit" || agent.decoration === "proposal" || agent.decoration === "knowledge" ? "typing" : agent.decoration === "follow" || agent.decoration === "relation" || agent.decoration === "contract" ? "reviewing" : "working";
 }

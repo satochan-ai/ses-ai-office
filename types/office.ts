@@ -6,7 +6,9 @@ export type OfficeAgent = {
   shortName: string;
   room: string;
   floor: "upper" | "lower";
-  accent: "navy" | "pink" | "green" | "purple" | "orange" | "cyan" | "teal";
+  floorId: "1f" | "2f";
+  floorLabel: string;
+  accent: "navy" | "pink" | "green" | "purple" | "orange" | "cyan" | "teal" | "blue" | "gold" | "slate" | "plum";
   status: OfficeAgentStatus;
   role: string;
   currentTask: string;
@@ -17,7 +19,7 @@ export type OfficeAgent = {
   metrics: string[];
   duties: string[];
   history: string[];
-  decoration: "strategy" | "search" | "network" | "matching" | "recruit" | "follow" | "analytics";
+  decoration: "strategy" | "search" | "network" | "matching" | "recruit" | "follow" | "analytics" | "relation" | "proposal" | "contract" | "knowledge";
 };
 
 export type OfficeAlert = {

@@ -1,37 +1,27 @@
-import type { AgentRoute, RoutePoint } from "@/types/route";
+import type { AgentRoute, OfficeFloorId, RoutePoint } from "@/types/route";
+
+const point = (id: string, label: string, x: number, y: number, floorId: OfficeFloorId = "1f"): RoutePoint => ({ id, label, x, y, floorId });
 
 export const routePoints: Record<string, RoutePoint> = {
-  managerDesk: { id: "managerDesk", label: "営業戦略席", x: 17, y: 24 },
-  managerBranch: { id: "managerBranch", label: "営業戦略席前", x: 30, y: 35 },
-  westNorth: { id: "westNorth", label: "北西サブ通路", x: 43, y: 35 },
-  mainNorth: { id: "mainNorth", label: "メイン通路北", x: 50, y: 35 },
-  receptionEntrance: { id: "receptionEntrance", label: "受付入口", x: 50, y: 22 },
-  receptionDesk: { id: "receptionDesk", label: "受付端末", x: 50, y: 10 },
-  analysisEntrance: { id: "analysisEntrance", label: "分析席入口", x: 57, y: 35 },
-  analystSide: { id: "analystSide", label: "分析担当横", x: 61, y: 25 },
-  analystDesk: { id: "analystDesk", label: "営業分析席", x: 66, y: 24 },
-  mainCenter: { id: "mainCenter", label: "メイン通路中央", x: 50, y: 49 },
-  mainSouth: { id: "mainSouth", label: "メイン通路南", x: 50, y: 64 },
-  matchingEntrance: { id: "matchingEntrance", label: "マッチング入口", x: 57, y: 64 },
-  matcherSide: { id: "matcherSide", label: "マッチング担当横", x: 61, y: 74 },
-  matcherDesk: { id: "matcherDesk", label: "マッチング席", x: 66, y: 78 },
-  handoffWest: { id: "handoffWest", label: "受け渡しテーブル西", x: 39, y: 49 },
-  handoffSouth: { id: "handoffSouth", label: "受け渡しテーブル南", x: 43, y: 56 },
-  meetingEntrance: { id: "meetingEntrance", label: "会議入口", x: 57, y: 49 },
-  meetingSeatA: { id: "meetingSeatA", label: "会議席A", x: 61, y: 49 },
-  meetingSeatB: { id: "meetingSeatB", label: "会議席B", x: 69, y: 49 },
-  newbizDesk: { id: "newbizDesk", label: "新規開拓席", x: 13, y: 78 },
-  newbizBranch: { id: "newbizBranch", label: "新規開拓席前", x: 22, y: 64 },
-  phoneDesk: { id: "phoneDesk", label: "電話席", x: 18, y: 67 },
-  bpDesk: { id: "bpDesk", label: "BP開拓席", x: 35, y: 78 },
-  bpBranch: { id: "bpBranch", label: "BP席前", x: 40, y: 64 },
-  networkDesk: { id: "networkDesk", label: "ネットワーク端末", x: 40, y: 70 },
-  recruitDesk: { id: "recruitDesk", label: "採用席", x: 87, y: 24 },
-  recruitBranch: { id: "recruitBranch", label: "採用席前", x: 77, y: 35 },
-  interviewDesk: { id: "interviewDesk", label: "面談席", x: 80, y: 26 },
-  followDesk: { id: "followDesk", label: "フォロー席", x: 87, y: 78 },
-  followBranch: { id: "followBranch", label: "フォロー席前", x: 77, y: 64 },
-  consultation: { id: "consultation", label: "相談席", x: 81, y: 70 },
+  managerDesk: point("managerDesk", "営業戦略席", 17, 24), managerBranch: point("managerBranch", "営業戦略席前", 30, 35),
+  westNorth: point("westNorth", "北西サブ通路", 43, 35), mainNorth: point("mainNorth", "メイン通路北", 50, 35),
+  receptionEntrance: point("receptionEntrance", "受付入口", 50, 22), receptionDesk: point("receptionDesk", "受付端末", 50, 10),
+  analysisEntrance: point("analysisEntrance", "分析席入口", 57, 35), analystSide: point("analystSide", "分析担当横", 61, 25), analystDesk: point("analystDesk", "営業分析席", 66, 24),
+  mainCenter: point("mainCenter", "メイン通路中央", 50, 49), mainSouth: point("mainSouth", "メイン通路南", 50, 64), elevator1F: point("elevator1F", "1階エレベーター", 50, 49),
+  matchingEntrance: point("matchingEntrance", "マッチング入口", 57, 64), matcherSide: point("matcherSide", "マッチング担当横", 61, 74), matcherDesk: point("matcherDesk", "マッチング席", 66, 78),
+  handoffWest: point("handoffWest", "受け渡しテーブル西", 39, 49), handoffSouth: point("handoffSouth", "受け渡しテーブル南", 43, 56),
+  meetingEntrance: point("meetingEntrance", "会議入口", 57, 49), meetingSeatA: point("meetingSeatA", "会議席A", 61, 49), meetingSeatB: point("meetingSeatB", "会議席B", 69, 49),
+  newbizDesk: point("newbizDesk", "新規開拓席", 13, 78), newbizBranch: point("newbizBranch", "新規開拓席前", 22, 64), phoneDesk: point("phoneDesk", "電話席", 18, 67),
+  bpDesk: point("bpDesk", "BP開拓席", 35, 78), bpBranch: point("bpBranch", "BP席前", 40, 64), networkDesk: point("networkDesk", "ネットワーク端末", 40, 70),
+  recruitDesk: point("recruitDesk", "採用席", 87, 24), recruitBranch: point("recruitBranch", "採用席前", 77, 35), interviewDesk: point("interviewDesk", "面談席", 80, 26),
+  followDesk: point("followDesk", "フォロー席", 87, 78), followBranch: point("followBranch", "フォロー席前", 77, 64), consultation: point("consultation", "相談席", 81, 70),
+
+  elevator2F: point("elevator2F", "2階エレベーター", 50, 49, "2f"), secondMainNorth: point("secondMainNorth", "2階メイン通路北", 50, 35, "2f"), secondMainSouth: point("secondMainSouth", "2階メイン通路南", 50, 64, "2f"),
+  relationDesk: point("relationDesk", "顧客リレーション席", 21, 24, "2f"), relationBranch: point("relationBranch", "顧客席前", 40, 35, "2f"), customerTerminal: point("customerTerminal", "顧客履歴端末", 31, 25, "2f"), relationSide: point("relationSide", "顧客担当横", 28, 24, "2f"),
+  proposalDesk: point("proposalDesk", "提案・面談支援席", 79, 24, "2f"), proposalBranch: point("proposalBranch", "提案席前", 60, 35, "2f"), companyTerminal: point("companyTerminal", "企業分析端末", 69, 25, "2f"), proposalSide: point("proposalSide", "提案担当横", 72, 24, "2f"),
+  contractDesk: point("contractDesk", "契約・請求管理席", 21, 78, "2f"), contractBranch: point("contractBranch", "契約席前", 40, 64, "2f"), documentShelf: point("documentShelf", "契約書棚", 31, 70, "2f"), invoiceTerminal: point("invoiceTerminal", "請求確認端末", 39, 56, "2f"), contractSide: point("contractSide", "契約担当横", 28, 78, "2f"),
+  knowledgeDesk: point("knowledgeDesk", "教育・ナレッジ席", 79, 78, "2f"), knowledgeBranch: point("knowledgeBranch", "教育席前", 60, 64, "2f"), library: point("library", "ナレッジ棚", 69, 70, "2f"), whiteboard: point("whiteboard", "ホワイトボード", 61, 56, "2f"), knowledgeSide: point("knowledgeSide", "教育担当横", 72, 78, "2f"),
+  documentTable: point("documentTable", "資料確認テーブル", 39, 49, "2f"), secondMeeting: point("secondMeeting", "2階小会議席", 63, 49, "2f"),
 };
 
 const route = (id: string, points: string[], purpose: AgentRoute["purpose"], detail: Partial<AgentRoute> = {}): AgentRoute => ({ id, points, purpose, ...detail });
@@ -47,22 +37,33 @@ export const officeRoutes: Record<string, AgentRoute> = {
   matcherMeeting: route("matcherMeeting", ["handoffSouth", "mainCenter", "meetingEntrance", "meetingSeatB"], "meeting", { interactionAt: 3, interactionTarget: "manager", interactionType: "writeRecommendation", interactionText: "強みを整理します" }),
   managerReturn: route("managerReturn", ["meetingSeatA", "meetingEntrance", "mainCenter", "mainNorth", "westNorth", "managerBranch", "managerDesk"], "return", { interactionAt: 6, interactionType: "complete", interactionText: "提案準備が完了しました" }),
   matcherReturn: route("matcherReturn", ["meetingSeatB", "meetingEntrance", "mainCenter", "mainSouth", "matchingEntrance", "matcherSide", "matcherDesk"], "return"),
-  newbizTask: route("newbizTask", ["newbizDesk", "newbizBranch", "phoneDesk"], "task", { interactionAt: 2, interactionType: "task", interactionText: "電話・メールを作成中" }),
-  newbizReturn: route("newbizReturn", ["phoneDesk", "newbizBranch", "newbizDesk"], "return"),
-  bpTask: route("bpTask", ["bpDesk", "bpBranch", "networkDesk"], "task", { interactionAt: 2, interactionType: "task", interactionText: "企業情報を確認中" }),
-  bpReturn: route("bpReturn", ["networkDesk", "bpBranch", "bpDesk"], "return"),
-  matchingTask: route("matchingTask", ["matcherDesk", "matcherSide", "matchingEntrance"], "task", { interactionAt: 2, interactionType: "task", interactionText: "案件と要員を照合中" }),
-  matchingReturn: route("matchingReturn", ["matchingEntrance", "matcherSide", "matcherDesk"], "return"),
-  recruitTask: route("recruitTask", ["recruitDesk", "recruitBranch", "interviewDesk"], "task", { interactionAt: 2, interactionType: "task", interactionText: "候補者を確認中" }),
-  recruitReturn: route("recruitReturn", ["interviewDesk", "recruitBranch", "recruitDesk"], "return"),
-  followTask: route("followTask", ["followDesk", "followBranch", "consultation"], "task", { interactionAt: 2, interactionType: "task", interactionText: "フォロー内容を確認中" }),
-  followReturn: route("followReturn", ["consultation", "followBranch", "followDesk"], "return"),
-  analyticsTask: route("analyticsTask", ["analystDesk", "analystSide"], "task", { interactionAt: 1, interactionType: "task", interactionText: "分析結果を確認中" }),
-  analyticsReturn: route("analyticsReturn", ["analystSide", "analystDesk"], "return"),
-  managerTask: route("managerTask", ["managerDesk", "managerBranch", "handoffWest"], "task", { interactionAt: 2, interactionType: "task", interactionText: "優先順位を確認中" }),
-  managerTaskReturn: route("managerTaskReturn", ["handoffWest", "managerBranch", "managerDesk"], "return"),
+  newbizTask: route("newbizTask", ["newbizDesk", "newbizBranch", "phoneDesk"], "task", { interactionAt: 2, interactionType: "task", interactionText: "電話・メールを作成中" }), newbizReturn: route("newbizReturn", ["phoneDesk", "newbizBranch", "newbizDesk"], "return"),
+  bpTask: route("bpTask", ["bpDesk", "bpBranch", "networkDesk"], "task", { interactionAt: 2, interactionType: "task", interactionText: "企業情報を確認中" }), bpReturn: route("bpReturn", ["networkDesk", "bpBranch", "bpDesk"], "return"),
+  matchingTask: route("matchingTask", ["matcherDesk", "matcherSide", "matchingEntrance"], "task", { interactionAt: 2, interactionType: "task", interactionText: "案件と要員を照合中" }), matchingReturn: route("matchingReturn", ["matchingEntrance", "matcherSide", "matcherDesk"], "return"),
+  recruitTask: route("recruitTask", ["recruitDesk", "recruitBranch", "interviewDesk"], "task", { interactionAt: 2, interactionType: "task", interactionText: "候補者を確認中" }), recruitReturn: route("recruitReturn", ["interviewDesk", "recruitBranch", "recruitDesk"], "return"),
+  followTask: route("followTask", ["followDesk", "followBranch", "consultation"], "task", { interactionAt: 2, interactionType: "task", interactionText: "フォロー内容を確認中" }), followReturn: route("followReturn", ["consultation", "followBranch", "followDesk"], "return"),
+  analyticsTask: route("analyticsTask", ["analystDesk", "analystSide"], "task", { interactionAt: 1, interactionType: "task", interactionText: "分析結果を確認中" }), analyticsReturn: route("analyticsReturn", ["analystSide", "analystDesk"], "return"),
+  managerTask: route("managerTask", ["managerDesk", "managerBranch", "handoffWest"], "task", { interactionAt: 2, interactionType: "task", interactionText: "優先順位を確認中" }), managerTaskReturn: route("managerTaskReturn", ["handoffWest", "managerBranch", "managerDesk"], "return"),
+
+  relationDeskToCustomerTerminal: route("relationDeskToCustomerTerminal", ["relationDesk", "relationBranch", "secondMainNorth", "customerTerminal", "documentTable"], "task", { interactionAt: 4, interactionType: "reviewCard", interactionText: "顧客関係性を更新中" }), relationReturn: route("relationReturn", ["documentTable", "secondMainNorth", "relationBranch", "relationDesk"], "return"),
+  proposalDeskToMeetingSpace: route("proposalDeskToMeetingSpace", ["proposalDesk", "proposalBranch", "secondMainNorth", "elevator2F", "secondMeeting"], "meeting", { interactionAt: 4, interactionType: "sharedScreen", interactionText: "面談質問を作成中" }), proposalReturn: route("proposalReturn", ["secondMeeting", "elevator2F", "secondMainNorth", "proposalBranch", "proposalDesk"], "return"),
+  contractDeskToDocumentShelf: route("contractDeskToDocumentShelf", ["contractDesk", "contractBranch", "secondMainSouth", "documentShelf", "invoiceTerminal"], "task", { interactionAt: 4, interactionType: "reviewCard", interactionText: "契約・請求を照合中" }), contractReturn: route("contractReturn", ["invoiceTerminal", "secondMainSouth", "contractBranch", "contractDesk"], "return"),
+  knowledgeDeskToWhiteboard: route("knowledgeDeskToWhiteboard", ["knowledgeDesk", "knowledgeBranch", "secondMainSouth", "library", "whiteboard"], "task", { interactionAt: 4, interactionType: "writeRecommendation", interactionText: "教材へナレッジを登録中" }), knowledgeReturn: route("knowledgeReturn", ["whiteboard", "secondMainSouth", "knowledgeBranch", "knowledgeDesk"], "return"),
+  knowledgeDeskToLibrary: route("knowledgeDeskToLibrary", ["knowledgeDesk", "knowledgeBranch", "library"], "task"), relationDeskToMeetingSpace: route("relationDeskToMeetingSpace", ["relationDesk", "relationBranch", "secondMainNorth", "elevator2F", "secondMeeting"], "meeting"), proposalDeskToDocumentTable: route("proposalDeskToDocumentTable", ["proposalDesk", "proposalBranch", "secondMainNorth", "documentTable"], "task"),
+
+  firstFloorManagerToSecondFloorRelation: route("firstFloorManagerToSecondFloorRelation", ["managerDesk", "managerBranch", "westNorth", "mainCenter", "elevator1F", "elevator2F", "secondMainNorth", "relationBranch", "relationSide", "relationSide", "relationSide", "relationBranch", "secondMainNorth", "elevator2F", "elevator1F", "mainCenter", "westNorth", "managerBranch", "managerDesk"], "confirm", { interactionAt: 8, interactionTarget: "relation", interactionType: "deliverFile", interactionText: "増員商機が3社あります" }),
+  firstFloorManagerToSecondFloorProposal: route("firstFloorManagerToSecondFloorProposal", ["managerDesk", "managerBranch", "westNorth", "mainCenter", "elevator1F", "elevator2F", "secondMainNorth", "proposalBranch", "proposalSide", "proposalSide", "proposalSide", "proposalBranch", "secondMainNorth", "elevator2F", "elevator1F", "mainCenter", "westNorth", "managerBranch", "managerDesk"], "confirm", { interactionAt: 8, interactionTarget: "proposal", interactionType: "sharedScreen", interactionText: "推薦文と面談質問を確認します" }),
+  firstFloorFollowToSecondFloorContract: route("firstFloorFollowToSecondFloorContract", ["followDesk", "followBranch", "mainSouth", "elevator1F", "elevator2F", "secondMainSouth", "contractBranch", "contractSide", "contractSide", "contractSide", "contractBranch", "secondMainSouth", "elevator2F", "elevator1F", "mainSouth", "followBranch", "followDesk"], "confirm", { interactionAt: 7, interactionTarget: "contract", interactionType: "deliverFile", interactionText: "更新期限と勤務表を確認します" }),
+  firstFloorAnalysisToSecondFloorKnowledge: route("firstFloorAnalysisToSecondFloorKnowledge", ["analystDesk", "analystSide", "analysisEntrance", "mainNorth", "elevator1F", "elevator2F", "secondMainSouth", "knowledgeBranch", "knowledgeSide", "knowledgeSide", "knowledgeSide", "knowledgeBranch", "secondMainSouth", "elevator2F", "elevator1F", "mainNorth", "analysisEntrance", "analystSide", "analystDesk"], "confirm", { interactionAt: 8, interactionTarget: "knowledge", interactionType: "deliverFile", interactionText: "分析結果を教材化します" }),
+  firstFloorMatchingToSecondFloorProposal: route("firstFloorMatchingToSecondFloorProposal", ["matcherDesk", "matcherSide", "matchingEntrance", "mainSouth", "elevator1F", "elevator2F", "secondMainNorth", "proposalBranch", "proposalSide", "proposalSide", "proposalSide", "proposalBranch", "secondMainNorth", "elevator2F", "elevator1F", "mainSouth", "matchingEntrance", "matcherSide", "matcherDesk"], "confirm", { interactionAt: 8, interactionTarget: "proposal", interactionType: "compareCandidates", interactionText: "候補者3名の選定理由です" }),
+  firstFloorRecruitingToSecondFloorKnowledge: route("firstFloorRecruitingToSecondFloorKnowledge", ["recruitDesk", "recruitBranch", "mainNorth", "elevator1F", "elevator2F", "secondMainSouth", "knowledgeBranch", "knowledgeSide", "knowledgeSide", "knowledgeSide", "knowledgeBranch", "secondMainSouth", "elevator2F", "elevator1F", "mainNorth", "recruitBranch", "recruitDesk"], "confirm", { interactionAt: 7, interactionTarget: "knowledge", interactionType: "deliverFile", interactionText: "面談内容を教材化します" }),
 };
 
-export const deskPointByAgent: Record<string, string> = { manager: "managerDesk", analytics: "analystDesk", newbiz: "newbizDesk", bp: "bpDesk", matching: "matcherDesk", recruit: "recruitDesk", follow: "followDesk" };
-export const instructionRouteByAgent: Record<string, [string, string]> = { manager: ["managerTask", "managerTaskReturn"], analytics: ["analyticsTask", "analyticsReturn"], newbiz: ["newbizTask", "newbizReturn"], bp: ["bpTask", "bpReturn"], matching: ["matchingTask", "matchingReturn"], recruit: ["recruitTask", "recruitReturn"], follow: ["followTask", "followReturn"] };
+export const deskPointByAgent: Record<string, string> = { manager: "managerDesk", analytics: "analystDesk", newbiz: "newbizDesk", bp: "bpDesk", matching: "matcherDesk", recruit: "recruitDesk", follow: "followDesk", relation: "relationDesk", proposal: "proposalDesk", contract: "contractDesk", knowledge: "knowledgeDesk" };
+export const instructionRouteByAgent: Record<string, [string, string]> = { manager: ["managerTask", "managerTaskReturn"], analytics: ["analyticsTask", "analyticsReturn"], newbiz: ["newbizTask", "newbizReturn"], bp: ["bpTask", "bpReturn"], matching: ["matchingTask", "matchingReturn"], recruit: ["recruitTask", "recruitReturn"], follow: ["followTask", "followReturn"], relation: ["relationDeskToCustomerTerminal", "relationReturn"], proposal: ["proposalDeskToMeetingSpace", "proposalReturn"], contract: ["contractDeskToDocumentShelf", "contractReturn"], knowledge: ["knowledgeDeskToWhiteboard", "knowledgeReturn"] };
 export const demoRouteByStep: Record<number, Record<string, string>> = { 1: { manager: "managerReception" }, 2: { manager: "managerAnalyst" }, 3: { manager: "managerMatcher" }, 4: { matching: "matcherHandoff" }, 5: { manager: "managerHandoff", matching: "matcherAtHandoff" }, 6: { manager: "managerMeeting", matching: "matcherMeeting" }, 7: { manager: "managerReturn", matching: "matcherReturn" } };
+export const collaborationRoutesByAgent: Record<string, { label: string; routeId: string }[]> = {
+  manager: [{ label: "顧客商機を2階で確認", routeId: "firstFloorManagerToSecondFloorRelation" }, { label: "推薦文を2階で確認", routeId: "firstFloorManagerToSecondFloorProposal" }],
+  follow: [{ label: "契約更新を2階で確認", routeId: "firstFloorFollowToSecondFloorContract" }], analytics: [{ label: "分析結果を教材化", routeId: "firstFloorAnalysisToSecondFloorKnowledge" }],
+  matching: [{ label: "候補者カードを共有", routeId: "firstFloorMatchingToSecondFloorProposal" }], recruit: [{ label: "面談内容を教材化", routeId: "firstFloorRecruitingToSecondFloorKnowledge" }],
+};

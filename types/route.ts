@@ -6,7 +6,8 @@ export type FacingDirection = "up" | "down" | "left" | "right" | "person" | "sea
 export type RoutePurpose = "reception" | "confirm" | "handoff" | "meeting" | "task" | "return";
 export type InteractionType = "reviewCard" | "sharedScreen" | "deliverFile" | "compareCandidates" | "writeRecommendation" | "task" | "complete";
 
-export type RoutePoint = OfficePoint & { id: string; label: string };
+export type OfficeFloorId = "1f" | "2f";
+export type RoutePoint = OfficePoint & { id: string; label: string; floorId: OfficeFloorId };
 export type AgentRoute = {
   id: string;
   points: string[];
@@ -28,4 +29,6 @@ export type RoutedAgentMotion = {
   interactionType?: InteractionType;
   interactionText?: string;
   seated: boolean;
+  floorId: OfficeFloorId;
+  inElevator: boolean;
 };
