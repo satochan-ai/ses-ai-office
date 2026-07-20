@@ -7,7 +7,7 @@ import { officeActions, officeAgents, officeAlerts, officeStatusBadges } from "@
 import type { OfficeAgent, OfficeAgentStatus } from "@/types/office";
 import { useOfficeDemo } from "@/hooks/useOfficeDemo";
 import { useAgentAnimation } from "@/hooks/useAgentAnimation";
-import { useAgentMovement } from "@/hooks/useAgentMovement";
+import { useRouteMovement } from "@/hooks/useRouteMovement";
 import { animationForAgent } from "@/types/animation";
 import { DemoControls, DemoResult, DemoStart } from "./OfficeDemo";
 import FirstVisitGuide from "./FirstVisitGuide";
@@ -41,7 +41,7 @@ function Toast({ message }: { message: string }) { return <div className={s.toas
 
 export default function VisualOffice() {
   const [selected, setSelected] = useState<OfficeAgent | null>(null); const [speeches, setSpeeches] = useState<Record<string, string>>({}); const [histories, setHistories] = useState<Record<string, string[]>>({}); const [toast, setToast] = useState(""); const [guideOpen, setGuideOpen] = useState(false); const instructionTimer = useRef<number | null>(null);
-  const demo = useOfficeDemo(); const agentAnimation = useAgentAnimation(); const motions = useAgentMovement(demo.step?.id, agentAnimation.states);
+  const demo = useOfficeDemo(); const agentAnimation = useAgentAnimation(); const motions = useRouteMovement(demo.step?.id, demo.status, demo.speed, agentAnimation.states);
   const selectedSpeech = selected ? speeches[selected.id] ?? selected.speech : ""; const selectedHistory = useMemo(() => selected ? histories[selected.id] ?? selected.history : [], [histories, selected]);
   const visibleAgents = officeAgents.map(agent => { const instruction = agentAnimation.states[agent.id]; return { ...agent, status: demo.step?.statuses[agent.id] ?? (instruction === "completed" ? "完了" : instruction ? "分析中" : agent.status), speech: demo.step?.speeches[agent.id] ?? speeches[agent.id] ?? agent.speech, currentTask: demo.step?.agentIds.includes(agent.id) ? demo.step.process : agent.currentTask, progress: agent.id === "matching" && demo.step?.id === 3 ? demo.matchingProgress : agent.progress }; });
   const demoBadges = demo.step ? [`新着案件 ${demo.step.id >= 1 ? 19 : 18}`, `提案候補 ${demo.step.id >= 4 ? 10 : 7}`, `提案中 ${demo.status === "completed" ? 28 : 27}`, "面談予定 14", "要フォロー 6"] : officeStatusBadges;
