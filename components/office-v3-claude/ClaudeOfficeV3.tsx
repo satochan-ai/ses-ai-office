@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Building2, LayoutDashboard, MousePointerClick, Sparkles } from "lucide-react";
 import { officeAgents } from "@/data/office";
-import { v3AgentPlacements, v3Areas, v3Zones } from "@/data/officeV3ClaudeLayout";
+import { v3ClaudeOnlyAgents } from "@/data/officeV3ClaudeAgents";
+import { v3AgentPlacements, v3CentralTeamPlacements, v3Areas, v3Zones } from "@/data/officeV3ClaudeLayout";
 import type { V3AgentView, V3AreaId } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
 import OfficeScene from "./OfficeScene";
@@ -25,20 +26,43 @@ export default function ClaudeOfficeV3() {
   }, []);
 
   const views = useMemo<V3AgentView[]>(() => {
+    // 既存11名は data/office.ts（V1〜V3共通）からそのまま読み取る。
     const agentMap = new Map(officeAgents.map(agent => [agent.id, agent]));
+    // 品質管理・経営参謀の2名だけは Claude版V3専用データから読み取る。
+    const claudeOnlyMap = new Map(v3ClaudeOnlyAgents.map(agent => [agent.id, agent]));
     const zoneMap = new Map(v3Zones.map(zone => [zone.id, zone]));
-    return v3AgentPlacements.flatMap(placement => {
-      const agent = agentMap.get(placement.agentId);
-      if (!agent) return [];
-      return [{
-        placement,
-        name: agent.name,
-        role: agent.role,
-        zoneName: zoneMap.get(placement.zoneId)?.name ?? "",
-        currentTask: agent.currentTask,
-        duties: agent.duties,
-        history: agent.history,
-      }];
+
+    // 既存11名の配置＋中央統括チーム2名の配置を合わせて13名分にする。
+    const allPlacements = [...v3AgentPlacements, ...v3CentralTeamPlacements];
+
+    return allPlacements.flatMap(placement => {
+      const fieldAgent = agentMap.get(placement.agentId);
+      if (fieldAgent) {
+        return [{
+          placement,
+          name: fieldAgent.name,
+          role: fieldAgent.role,
+          zoneName: zoneMap.get(placement.zoneId)?.name ?? "",
+          currentTask: fieldAgent.currentTask,
+          duties: fieldAgent.duties,
+          history: fieldAgent.history,
+        }];
+      }
+      const centralAgent = claudeOnlyMap.get(placement.agentId);
+      if (centralAgent) {
+        return [{
+          placement,
+          name: centralAgent.name,
+          role: centralAgent.role,
+          // 中央統括チームは「所属」欄にゾーン名ではなくチーム名を表示する。
+          zoneName: "中央統括チーム",
+          currentTask: centralAgent.currentTask,
+          duties: centralAgent.duties,
+          history: centralAgent.history,
+          finalDeliverables: centralAgent.finalDeliverables,
+        }];
+      }
+      return [];
     });
   }, []);
 
@@ -58,7 +82,7 @@ export default function ClaudeOfficeV3() {
         </div>
         <div className={s.headerActions}>
           <p className={s.headline}>
-            ひとつのフロアで、11名のAI社員が中央指令席を囲んで働いています。
+            ひとつのフロアで、13名のAI社員が中央指令席を囲んで働いています。
           </p>
           <Link href="/dashboard" className={s.dashboardLink}>
             <LayoutDashboard size={13} aria-hidden="true" />

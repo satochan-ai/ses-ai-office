@@ -96,6 +96,20 @@ export default function AgentDetailPanel({ view, onClose }: { view: V3AgentView;
           ))}
         </ul>
       </section>
+
+      {view.finalDeliverables && view.finalDeliverables.length > 0 ? (
+        <section>
+          <h3>最終成果物</h3>
+          <ul className={s.detailChips}>
+            {view.finalDeliverables.map(item => (
+              <li key={item}>
+                <CheckCircle2 size={11} aria-hidden="true" />
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

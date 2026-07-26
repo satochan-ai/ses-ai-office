@@ -139,4 +139,24 @@ export type V3AgentView = {
   currentTask: string;
   duties: string[];
   history: string[];
+  /** 中央統括チーム（品質管理・経営参謀）のみ使用。存在する場合だけ詳細パネルに表示する。 */
+  finalDeliverables?: string[];
+};
+
+/**
+ * Claude版V3専用に追加する中央統括チームのプロフィール。
+ * data/office.ts（V1〜V3共通・11名）とは別に、data/officeV3ClaudeAgents.ts で管理する。
+ * 既存の OfficeAgent 型・data/office.ts には一切手を加えない。
+ */
+export type V3ClaudeOnlyAgentProfile = {
+  /** V3AgentPlacement.agentId と一致させるID。 */
+  id: string;
+  name: string;
+  role: string;
+  currentTask: string;
+  duties: string[];
+  /** 「今日の処理例」に表示する配列。 */
+  history: string[];
+  /** 「最終成果物」に表示する配列。 */
+  finalDeliverables: string[];
 };

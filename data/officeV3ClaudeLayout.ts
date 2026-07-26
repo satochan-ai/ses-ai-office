@@ -374,9 +374,41 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
 ];
 
+/**
+ * 中央統括チームの追加2名（品質管理・経営参謀）。
+ * 既存11名（p-manager〜p-proposal）の座標・commandゾーン境界・通路は一切変更しない。
+ * 営業Mgr(gx15.2,gy15.4)の北西寄り／南東寄りへ、指令デスク(gx12.3-17.3×gy12.4-15.0)と
+ * SYNCテーブル(gx15.75-18.05×gy16.05-18.35)を避けて配置する。
+ */
+export const v3CentralTeamPlacements: V3AgentPlacement[] = [
+  {
+    id: "p-quality", agentId: "quality", zoneId: "command",
+    gx: 12.0, gy: 14.6, facing: "se", scale: 1, labelPosition: "left",
+    deskPosition: { gx: 12.0, gy: 14.6 },
+    equipment: ["品質チェック端末", "チェックリストボード", "差し戻し履歴"],
+    currentStatus: "品質確認中", shortRole: "品質",
+    appearance: {
+      skin: "#e2b48d", hair: "#4a4a4a", hairStyle: "bob", outfit: "#5c6b78", outfitAlt: "#33383d",
+      build: "regular", stature: 0.98, glasses: true, headset: false, prop: "documents", pose: "reviewing",
+    },
+  },
+  {
+    id: "p-strategist", agentId: "strategist", zoneId: "command",
+    gx: 17.8, gy: 15.3, facing: "nw", scale: 1, labelPosition: "right",
+    deskPosition: { gx: 17.8, gy: 15.3 },
+    equipment: ["統合ダッシュボード端末", "優先度マトリクス", "経営サマリーボード"],
+    currentStatus: "集約中", shortRole: "参謀",
+    appearance: {
+      skin: "#eab68f", hair: "#3d3630", hairStyle: "long", outfit: "#454f5e", outfitAlt: "#2c323b",
+      build: "regular", stature: 1.0, glasses: false, headset: false, prop: "tablet", pose: "reading",
+    },
+  },
+];
+
 /** 常時ラベル用の状態トーン（色だけに頼らず文言も併記する）。 */
 export const v3StatusTone: Record<string, "run" | "check" | "talk"> = {
   "全体指揮中": "run", "モニター確認": "run", "教材を整理": "check", "顧客履歴を確認": "run",
   "契約書を確認": "check", "架電中": "talk", "商流を整理": "check", "案件と要員を照合": "run",
   "候補者を確認": "check", "面談中": "talk", "推薦文を作成": "run",
+  "品質確認中": "check", "集約中": "run",
 };

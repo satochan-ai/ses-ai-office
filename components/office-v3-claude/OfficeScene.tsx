@@ -168,7 +168,7 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
       viewBox={`${VIEWBOX.x} ${VIEWBOX.y} ${VIEWBOX.w} ${VIEWBOX.h}`}
       preserveAspectRatio="xMidYMid slice"
       role="group"
-      aria-label="アイソメトリック表示のSES AI Office。AI社員11名が中央指令席を囲んで働いています。"
+      aria-label="アイソメトリック表示のSES AI Office。AI社員13名が中央指令席を囲んで働いています。"
     >
       <defs>
         <linearGradient id="v3Dusk" x1="0" y1="0" x2="0" y2="1">
