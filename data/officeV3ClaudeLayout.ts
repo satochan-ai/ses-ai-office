@@ -3,6 +3,7 @@ import type {
   V3Cell,
   V3Corridor,
   V3Furniture,
+  V3HumanSeat,
   V3Rect,
   V3Zone,
 } from "@/types/officeV3Claude";
@@ -47,6 +48,9 @@ export const rectCenter = ({ gx0, gy0, gx1, gy1 }: V3Rect): V3Cell => ({
 
 /** 画面全体のビューボックス。床ダイヤ 1800×900 に壁と余白を足した値。 */
 export const VIEWBOX = { x: -980, y: -330, w: 1960, h: 1270 } as const;
+
+/** 人間責任者席のID。AI社員のagentIdとは別の名前空間として扱う。 */
+export const HUMAN_SEAT_ID = "human-lead";
 
 /* ------------------------------------------------------------------ */
 /* フォーカス（PC のエリアズーム／モバイルのエリア切替で共有）             */
@@ -194,8 +198,9 @@ export const v3Furniture: V3Furniture[] = [
 
   /* 中央指令席 */
   { id: "cmd-wall-a", type: "wallScreen", zoneId: "command", gx: 12.6, gy: 11.8, width: 3.2, height: 0.6, facing: "se", label: "全体状況モニター", accent: "#c9a063" },
-  { id: "cmd-wall-b", type: "wallScreen", zoneId: "command", gx: 17.6, gy: 11.8, width: 3.2, height: 0.6, facing: "sw", label: "案件・提案状況", accent: "#c9a063" },
-  { id: "cmd-monitors", type: "monitorBank", zoneId: "command", gx: 14.8, gy: 13.0, width: 3.2, height: 0.6, facing: "se", label: "統括モニター", accent: "#d5b478" },
+  // 人間責任者席のための余白確保でgxを微調整（家具のみ、AI社員座標は無変更）
+  { id: "cmd-wall-b", type: "wallScreen", zoneId: "command", gx: 18.1, gy: 11.8, width: 3.2, height: 0.6, facing: "sw", label: "案件・提案状況", accent: "#c9a063" },
+  { id: "cmd-monitors", type: "monitorBank", zoneId: "command", gx: 14.3, gy: 13.0, width: 2.8, height: 0.6, facing: "se", label: "統括モニター", accent: "#d5b478" },
   { id: "cmd-desk", type: "commandDesk", zoneId: "command", gx: 14.8, gy: 13.7, width: 5.0, height: 2.6, facing: "se", label: "AI COMMAND" },
   // 指令席まわりの余白を確保するため、小物のランプは削減（改善2）
   { id: "cmd-sync", type: "roundTable", zoneId: "command", gx: 16.9, gy: 17.2, width: 2.3, height: 2.3, facing: "se", label: "SYNC" },
@@ -254,6 +259,8 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
     deskPosition: { gx: 14.8, gy: 13.7 },
     equipment: ["大型指令デスク", "全体状況モニター", "案件・提案状況ボード", "SYNCテーブル"],
     currentStatus: "全体指揮中", shortRole: "営業Mgr",
+    // 3層構造：経営・統括層（3名中の1名）。人間責任者席へ営業上の判断案を報告する。
+    hierarchyLevel: "management", reportsTo: HUMAN_SEAT_ID,
     appearance: {
       skin: "#e8b58f", hair: "#1f2733", hairStyle: "sidepart", outfit: "#2f4d72", outfitAlt: "#28374d",
       build: "regular", stature: 1.06, glasses: false, headset: false, prop: "tablet", pose: "pointing",
@@ -387,6 +394,8 @@ export const v3CentralTeamPlacements: V3AgentPlacement[] = [
     deskPosition: { gx: 12.0, gy: 14.6 },
     equipment: ["品質チェック端末", "チェックリストボード", "差し戻し履歴"],
     currentStatus: "品質確認中", shortRole: "品質",
+    // 3層構造：経営・統括層（3名中の1名）。重大な問題は人間責任者席へ直接報告する。
+    hierarchyLevel: "management", reportsTo: HUMAN_SEAT_ID,
     appearance: {
       skin: "#e2b48d", hair: "#4a4a4a", hairStyle: "bob", outfit: "#5c6b78", outfitAlt: "#33383d",
       build: "regular", stature: 0.98, glasses: true, headset: false, prop: "documents", pose: "reviewing",
@@ -398,12 +407,32 @@ export const v3CentralTeamPlacements: V3AgentPlacement[] = [
     deskPosition: { gx: 17.8, gy: 15.3 },
     equipment: ["統合ダッシュボード端末", "優先度マトリクス", "経営サマリーボード"],
     currentStatus: "集約中", shortRole: "参謀",
+    // 3層構造：経営・統括層（3名中の1名）。重要課題を人間責任者席へ提案する。
+    hierarchyLevel: "management", reportsTo: HUMAN_SEAT_ID,
     appearance: {
       skin: "#eab68f", hair: "#3d3630", hairStyle: "long", outfit: "#454f5e", outfitAlt: "#2c323b",
       build: "regular", stature: 1.0, glasses: false, headset: false, prop: "tablet", pose: "reading",
     },
   },
 ];
+
+/**
+ * 人間責任者席（3層構造の最終承認層）。AI社員ではないため人数には含めない。
+ * 経営・統括層3名（営業Mgr/品質管理/経営参謀）の北側＝中央奥に配置し、
+ * 指令席の壁面モニター2枚(cmd-wall-a/cmd-wall-b, gy11.8)の間の空きへ収める。
+ * commandゾーン境界・既存13名の座標・既存家具の座標は一切変更していない。
+ */
+export const v3HumanSeat: V3HumanSeat = {
+  id: HUMAN_SEAT_ID,
+  actorType: "human",
+  gx: 15.4, gy: 11.5,
+  label: "人間責任者",
+  subLabel: "最終判断・承認",
+  escalationSources: ["manager", "quality", "strategist"],
+  pendingApprovals: 2,
+  needsReview: 1,
+  todayKeyDecision: "営業重点企業の変更",
+};
 
 /** 常時ラベル用の状態トーン（色だけに頼らず文言も併記する）。 */
 export const v3StatusTone: Record<string, "run" | "check" | "talk"> = {

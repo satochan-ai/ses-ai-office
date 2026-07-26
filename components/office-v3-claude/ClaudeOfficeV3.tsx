@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Building2, LayoutDashboard, MousePointerClick, Sparkles } from "lucide-react";
 import { officeAgents } from "@/data/office";
 import { v3ClaudeOnlyAgents } from "@/data/officeV3ClaudeAgents";
-import { v3AgentPlacements, v3CentralTeamPlacements, v3Areas, v3Zones } from "@/data/officeV3ClaudeLayout";
+import { HUMAN_SEAT_ID, v3AgentPlacements, v3CentralTeamPlacements, v3Areas, v3HumanSeat, v3Zones } from "@/data/officeV3ClaudeLayout";
 import type { V3AgentView, V3AreaId } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
+import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import s from "./OfficeV3.module.css";
 
@@ -67,8 +68,14 @@ export default function ClaudeOfficeV3() {
   }, []);
 
   const selected = views.find(view => view.placement.agentId === selectedId) ?? null;
+  const isHumanSeatSelected = selectedId === HUMAN_SEAT_ID;
   const close = useCallback(() => setSelectedId(null), []);
   const select = useCallback((agentId: string) => setSelectedId(current => (current === agentId ? null : agentId)), []);
+
+  // 人間責任者席の詳細パネル用に、経営・統括層3名の最新ビューを渡す（AI社員の詳細パネルとは別コンポーネント）。
+  const managerView = views.find(view => view.placement.agentId === "manager");
+  const qualityView = views.find(view => view.placement.agentId === "quality");
+  const strategistView = views.find(view => view.placement.agentId === "strategist");
 
   return (
     <div className={s.page}>
@@ -110,7 +117,17 @@ export default function ClaudeOfficeV3() {
         <div className={s.viewport}>
           <OfficeScene views={views} selectedId={selectedId} area={area} compact={compact} onSelect={select} />
         </div>
-        {selected ? <AgentDetailPanel view={selected} onClose={close} /> : null}
+        {selected ? (
+          <AgentDetailPanel view={selected} onClose={close} />
+        ) : isHumanSeatSelected ? (
+          <HumanSeatPanel
+            seat={v3HumanSeat}
+            managerView={managerView}
+            qualityView={qualityView}
+            strategistView={strategistView}
+            onClose={close}
+          />
+        ) : null}
       </main>
 
       <p className={s.hint}>

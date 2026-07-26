@@ -348,6 +348,83 @@
   stroke: rgba(36, 33, 26, 0.4);
 }
 
+/* 経営・統括層（営業Mgr／品質管理／経営参謀）だけに付く、控えめな金の縁取り。
+   実務層と混在させず、3層構造の中位であることを示す。 */
+.agentLabelManagement rect {
+  stroke: rgba(226, 184, 119, 0.75);
+  stroke-width: 1.6;
+}
+
+/* ---------------- 人間責任者席 ---------------- */
+
+.humanSeat {
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.humanSeat:focus {
+  outline: none;
+}
+
+.humanSeat:focus-visible .agentHit {
+  fill: rgba(226, 184, 119, 0.12);
+  stroke: #e2b877;
+  stroke-width: 4;
+  stroke-dasharray: 9 7;
+}
+
+.humanSeatLabel rect {
+  fill: rgba(30, 24, 16, 0.9);
+  stroke: rgba(226, 184, 119, 0.85);
+  stroke-width: 1.8;
+}
+
+.humanSeatSub {
+  fill: #d9c3a0;
+  font-size: var(--v3-status);
+  font-weight: 600;
+}
+
+.humanSeatStatus rect {
+  fill: rgba(24, 30, 44, 0.82);
+  stroke: rgba(226, 184, 119, 0.4);
+  stroke-width: 1.2;
+}
+
+.humanSeatStatusText {
+  fill: #dfe4ec;
+  font-size: var(--v3-device);
+  font-weight: 600;
+}
+
+.humanSeatBadgeText {
+  fill: #fff;
+  font-size: var(--v3-device);
+  font-weight: 800;
+}
+
+.humanSeatSelected .humanSeatLabel rect {
+  fill: rgba(226, 184, 119, 0.94);
+}
+
+.humanSeatSelected .humanSeatSub {
+  fill: #3a2f1c;
+}
+
+/* 選択時だけ現れる、報告・承認関係を示す淡い連携線 */
+.connectorLine {
+  stroke: rgba(226, 184, 119, 0.55);
+  stroke-width: 2;
+  stroke-dasharray: 3 6;
+  stroke-linecap: round;
+  animation: v3-connector 2.4s linear infinite;
+}
+
+/* 人間責任者席専用の詳細パネル。既存の.detailと同じ枠組みだが、縁の色だけを変えて識別できるようにする。 */
+.humanSeatPanel {
+  border-color: rgba(226, 184, 119, 0.6);
+}
+
 /* ---------------- 詳細パネル ---------------- */
 
 .detail {
@@ -583,6 +660,10 @@
   to { opacity: 1; transform: none; }
 }
 
+@keyframes v3-connector {
+  to { stroke-dashoffset: -18; }
+}
+
 /* ---------------- レスポンシブ ---------------- */
 
 @media (max-width: 900px) {
@@ -627,7 +708,8 @@
   .typingArm,
   .badge,
   .eye,
-  .detail {
+  .detail,
+  .connectorLine {
     animation: none !important;
     transition: none !important;
   }

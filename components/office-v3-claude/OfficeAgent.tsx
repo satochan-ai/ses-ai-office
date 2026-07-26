@@ -300,7 +300,10 @@ export default function OfficeAgent({ view, selected, dimmed, onSelect }: Props)
         </g>
       </g>
 
-      <g className={s.agentLabel} transform={`translate(${labelPos.lx}, ${labelPos.ly})`}>
+      <g
+        className={`${s.agentLabel} ${placement.hierarchyLevel === "management" ? s.agentLabelManagement : ""}`}
+        transform={`translate(${labelPos.lx}, ${labelPos.ly})`}
+      >
         <rect x={0} y={-11} width={boxW} height={22} rx={8} />
         <circle cx={13} cy={0} r={3.2} fill={statusDot} className={s.statusDot} />
         <text x={22} y={4} textAnchor="start" className={s.labelRole}>

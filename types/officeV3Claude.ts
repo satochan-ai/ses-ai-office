@@ -111,6 +111,13 @@ export type V3Appearance = {
   pose: V3Pose;
 };
 
+/**
+ * 3層組織構造のうち、AI社員側の2層。
+ * "management" = 経営・統括層（AI営業Mgr／AI品質管理／AI経営参謀の3名のみ）。
+ * "field" = 部署・実務層（既存10名）。未設定の場合は "field" として扱う。
+ */
+export type V3HierarchyLevel = "management" | "field";
+
 export type V3AgentPlacement = {
   id: string;
   /** data/office.ts の officeAgents.id を参照（読み取り専用）。 */
@@ -128,6 +135,29 @@ export type V3AgentPlacement = {
   currentStatus: string;
   shortRole: string;
   appearance: V3Appearance;
+  /** 未指定の場合は "field"（部署・実務層）として扱う。 */
+  hierarchyLevel?: V3HierarchyLevel;
+  /** 報告先のagentId、または人間責任者席のID。未指定時はコード側でフォールバックする。 */
+  reportsTo?: string;
+};
+
+/**
+ * 人間責任者席。AI社員ではないため、V3AgentPlacement / officeAgents とは
+ * 別の型・別データとして管理する（AI社員数の集計対象に含めないため）。
+ * 人物イラストは持たず、席・デスク・表示パネルのみで存在を表現する。
+ */
+export type V3HumanSeat = {
+  id: string;
+  actorType: "human";
+  gx: number;
+  gy: number;
+  label: string;
+  subLabel: string;
+  /** この人物（経営・統括層）から報告・エスカレーションを受ける。 */
+  escalationSources: string[];
+  pendingApprovals: number;
+  needsReview: number;
+  todayKeyDecision: string;
 };
 
 /** 詳細パネルへ渡す統合ビュー。officeAgents と V3 配置データの合成結果。 */

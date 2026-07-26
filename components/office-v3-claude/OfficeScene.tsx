@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import {
   GRID_SIZE,
+  HUMAN_SEAT_ID,
   ISO_HALF_H,
   ISO_HALF_W,
   VIEWBOX,
@@ -13,9 +14,11 @@ import {
   v3Areas,
   v3Corridors,
   v3Furniture,
+  v3HumanSeat,
   v3Zones,
 } from "@/data/officeV3ClaudeLayout";
 import type { V3AgentView, V3AreaId } from "@/types/officeV3Claude";
+import HumanSeat from "./HumanSeat";
 import OfficeAgent from "./OfficeAgent";
 import OfficeFurniture from "./OfficeFurniture";
 import OfficeZone from "./OfficeZone";
@@ -156,11 +159,57 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
           />
         ),
       })),
+      {
+        key: v3HumanSeat.id,
+        depth: isoDepth(v3HumanSeat.gx, v3HumanSeat.gy),
+        z: 1,
+        node: (
+          <HumanSeat
+            seat={v3HumanSeat}
+            selected={selectedId === v3HumanSeat.id}
+            dimmed={selectedId !== null && selectedId !== v3HumanSeat.id}
+            onSelect={onSelect}
+          />
+        ),
+      },
     ];
     return items.sort((a, b) => a.depth - b.depth || a.z - b.z);
   }, [onSelect, selectedId, views]);
 
   const activeZones = new Set(v3Zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
+
+  // 3層構造の報告関係を、選択時だけ淡い線でつなぐ（常時は表示しない）。
+  const connectorLines = useMemo(() => {
+    if (!selectedId) return [];
+    const byAgentId = new Map(views.map(view => [view.placement.agentId, view.placement]));
+    const pointOf = (id: string) =>
+      id === HUMAN_SEAT_ID
+        ? { gx: v3HumanSeat.gx, gy: v3HumanSeat.gy }
+        : byAgentId.has(id)
+          ? { gx: byAgentId.get(id)!.gx, gy: byAgentId.get(id)!.gy }
+          : null;
+
+    const from = pointOf(selectedId);
+    if (!from) return [];
+
+    let targets: string[] = [];
+    if (selectedId === HUMAN_SEAT_ID) {
+      targets = v3HumanSeat.escalationSources;
+    } else {
+      const placement = byAgentId.get(selectedId);
+      if (placement) {
+        targets = [placement.reportsTo ?? (placement.hierarchyLevel === "management" ? HUMAN_SEAT_ID : "manager")];
+      }
+    }
+
+    return targets
+      .map(targetId => {
+        const to = pointOf(targetId);
+        if (!to || targetId === selectedId) return null;
+        return { id: `${selectedId}->${targetId}`, x1: isoX(from.gx, from.gy), y1: isoY(from.gx, from.gy) - 40, x2: isoX(to.gx, to.gy), y2: isoY(to.gx, to.gy) - 40 };
+      })
+      .filter((line): line is { id: string; x1: number; y1: number; x2: number; y2: number } => line !== null);
+  }, [selectedId, views]);
 
   return (
     <svg
@@ -168,7 +217,7 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
       viewBox={`${VIEWBOX.x} ${VIEWBOX.y} ${VIEWBOX.w} ${VIEWBOX.h}`}
       preserveAspectRatio="xMidYMid slice"
       role="group"
-      aria-label="アイソメトリック表示のSES AI Office。AI社員13名が中央指令席を囲んで働いています。"
+      aria-label="アイソメトリック表示のSES AI Office。AI社員13名が中央指令席を囲んで働き、その奥に人間責任者席があります。"
     >
       <defs>
         <linearGradient id="v3Dusk" x1="0" y1="0" x2="0" y2="1">
@@ -205,6 +254,20 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
         {props.map(item => (
           <g key={item.key}>{item.node}</g>
         ))}
+
+        {/* 報告・承認フローの連携線。選択時だけ淡く表示し、常時は表示しない。 */}
+        {connectorLines.length > 0 ? (
+          <g aria-hidden="true" pointerEvents="none">
+            {connectorLines.map(line => (
+              <path
+                key={line.id}
+                d={`M${line.x1},${line.y1} Q${(line.x1 + line.x2) / 2},${Math.min(line.y1, line.y2) - 36} ${line.x2},${line.y2}`}
+                className={s.connectorLine}
+                fill="none"
+              />
+            ))}
+          </g>
+        ) : null}
 
         {/* 家具・人物の上からも同じ暖色照明が当たって見えるよう、ごく淡いオーバーレイを重ねる */}
         <ellipse
