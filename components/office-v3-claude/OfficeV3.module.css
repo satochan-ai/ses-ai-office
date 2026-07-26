@@ -411,6 +411,15 @@
   fill: #3a2f1c;
 }
 
+/* デモが人間承認待ちの間だけ、席自体を控えめに点灯させる（選択リングとは別扱い） */
+.humanSeatDemoActive {
+  fill: none;
+  stroke: #e2b877;
+  stroke-width: 3;
+  stroke-dasharray: 5 5;
+  animation: v3-demo-ring 1.8s ease-in-out infinite;
+}
+
 /* 選択時だけ現れる、報告・承認関係を示す淡い連携線 */
 .connectorLine {
   stroke: rgba(226, 184, 119, 0.55);
@@ -600,6 +609,286 @@
   padding: 3px 7px;
 }
 
+/* ---------------- 人間責任者パネル：デモ関連 ---------------- */
+
+.demoJobCard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--v3-line);
+}
+
+.demoJobCard dt {
+  font-size: 8px;
+  letter-spacing: 0.5px;
+  color: #8e97a6;
+  margin: 0;
+}
+
+.demoJobCard dd {
+  font-size: 10px;
+  color: var(--v3-ink);
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.demoProcessingNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 9px 0 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--v3-line);
+  font-size: 10px;
+  color: var(--v3-muted);
+}
+
+.humanApprovalActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.humanApprovalButton {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 9px;
+  padding: 9px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.humanApprovalButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.humanApprovalApprove {
+  background: rgba(143, 191, 156, 0.2);
+  border-color: rgba(143, 191, 156, 0.5);
+  color: #d7f0dd;
+}
+
+.humanApprovalApprove:hover:not(:disabled) {
+  background: rgba(143, 191, 156, 0.32);
+}
+
+.humanApprovalReject {
+  background: rgba(226, 99, 92, 0.14);
+  border-color: rgba(226, 99, 92, 0.4);
+  color: #f3d3d1;
+}
+
+.humanApprovalReject:hover:not(:disabled) {
+  background: rgba(226, 99, 92, 0.24);
+}
+
+.humanApprovalButton:focus-visible {
+  outline: 3px solid rgba(226, 184, 119, 0.55);
+  outline-offset: 2px;
+}
+
+.demoResultNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 9px 0 0;
+  padding: 8px 10px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.demoResultApproved {
+  background: rgba(143, 191, 156, 0.16);
+  border: 1px solid rgba(143, 191, 156, 0.4);
+  color: #cdeed4;
+}
+
+.demoResultRejected {
+  background: rgba(226, 184, 119, 0.14);
+  border: 1px solid rgba(226, 184, 119, 0.4);
+  color: #f3e2c2;
+}
+
+/* ---------------- デモ操作パネル ---------------- */
+
+.demoPanel {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  max-width: 1420px;
+  margin: 0 auto 6px;
+  padding: 7px 12px;
+  border: 1px solid var(--v3-line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 11px;
+}
+
+.demoPanelTag {
+  flex: none;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #f0d3a4;
+  background: rgba(226, 184, 119, 0.16);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+.demoPanelTitle {
+  font-weight: 700;
+  color: var(--v3-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.demoPanelSub {
+  color: var(--v3-muted);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.demoPanelDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v3-muted);
+}
+
+.demoPanelDotRunning {
+  background: #7fa8d6;
+  animation: v3-demo-pulse 1.6s ease-in-out infinite;
+}
+
+.demoPanelDotWaiting {
+  background: #e2b877;
+  animation: v3-demo-pulse 1.6s ease-in-out infinite;
+}
+
+.demoPanelDoneIcon {
+  color: #8fbf9c;
+}
+
+.demoPanelPrimary,
+.demoPanelGhost {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.demoPanelPrimary {
+  border: 1px solid rgba(226, 184, 119, 0.5);
+  background: rgba(226, 184, 119, 0.16);
+  color: #f7e9d2;
+}
+
+.demoPanelPrimary:hover {
+  background: rgba(226, 184, 119, 0.26);
+}
+
+.demoPanelGhost {
+  border: 1px solid var(--v3-line);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--v3-muted);
+}
+
+.demoPanelGhost:hover {
+  color: var(--v3-ink);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.demoPanelPrimary:focus-visible,
+.demoPanelGhost:focus-visible {
+  outline: 3px solid rgba(226, 184, 119, 0.55);
+  outline-offset: 2px;
+}
+
+/* ---------------- デモ処理ログ ---------------- */
+
+.demoLog {
+  max-width: 1420px;
+  margin: 8px auto 0;
+  padding: 8px 12px;
+  border: 1px solid var(--v3-line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.demoLog header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--v3-muted);
+  font-size: 10px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.demoLogStep,
+.demoLogDone {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--v3-ink);
+  white-space: nowrap;
+}
+
+.demoLogDone {
+  color: #8fbf9c;
+  background: rgba(143, 191, 156, 0.14);
+}
+
+.demoLog ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.demoLog li {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #c7cedb;
+}
+
+.demoLogLatest {
+  color: var(--v3-ink);
+  font-weight: 600;
+}
+
 /* ---------------- 補足 ---------------- */
 
 .hint {
@@ -664,6 +953,37 @@
   to { stroke-dashoffset: -18; }
 }
 
+@keyframes v3-demo-pulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@keyframes v3-demo-ring {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+
+/* ---------------- デモ中の現在処理AIの控えめな強調 ---------------- */
+
+/* 選択リング(.agentRing)とは別に、デモ進行中の担当だけへ淡い輪を追加する */
+.demoActiveRing {
+  fill: none;
+  stroke: #e2b877;
+  stroke-width: 3;
+  stroke-dasharray: 5 5;
+  animation: v3-demo-ring 1.8s ease-in-out infinite;
+}
+
+.demoActiveBadge rect {
+  fill: rgba(226, 184, 119, 0.92);
+}
+
+.demoActiveText {
+  fill: #241d0f;
+  font-size: var(--v3-status);
+  font-weight: 700;
+}
+
 /* ---------------- レスポンシブ ---------------- */
 
 @media (max-width: 900px) {
@@ -696,6 +1016,29 @@
     max-height: none;
     margin-top: 12px;
   }
+
+  .demoPanel {
+    font-size: 10px;
+    padding: 6px 10px;
+  }
+
+  .demoPanelSub {
+    display: none;
+  }
+
+  .demoPanelPrimary,
+  .demoPanelGhost {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+
+  .demoLog {
+    padding: 7px 10px;
+  }
+
+  .demoLog li {
+    font-size: 9px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -709,7 +1052,11 @@
   .badge,
   .eye,
   .detail,
-  .connectorLine {
+  .connectorLine,
+  .demoPanelDotRunning,
+  .demoPanelDotWaiting,
+  .demoActiveRing,
+  .humanSeatDemoActive {
     animation: none !important;
     transition: none !important;
   }

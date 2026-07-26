@@ -134,9 +134,12 @@ type Props = {
   /** 縦長ビューポート（モバイル）。全景表示だけ引いてフロア全体を収める。 */
   compact: boolean;
   onSelect: (agentId: string) => void;
+  /** デモ進行中に現在処理中のagentId（またはHUMAN_SEAT_ID）。selectedIdとは独立して扱う。 */
+  activeAgentId?: string | null;
+  activeStatusText?: string;
 };
 
-export default function OfficeScene({ views, selectedId, area, compact, onSelect }: Props) {
+export default function OfficeScene({ views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText }: Props) {
   const focus = v3Areas.find(a => a.id === area) ?? v3Areas[0];
   const scale = compact && area === "all" ? focus.scale * 0.72 : focus.scale;
   const viewCx = VIEWBOX.x + VIEWBOX.w / 2;
@@ -156,6 +159,8 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
             selected={selectedId === view.placement.agentId}
             dimmed={selectedId !== null && selectedId !== view.placement.agentId}
             onSelect={onSelect}
+            isDemoActive={activeAgentId === view.placement.agentId}
+            demoStatusText={activeAgentId === view.placement.agentId ? activeStatusText : undefined}
           />
         ),
       })),
@@ -169,12 +174,13 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
             selected={selectedId === v3HumanSeat.id}
             dimmed={selectedId !== null && selectedId !== v3HumanSeat.id}
             onSelect={onSelect}
+            isDemoActive={activeAgentId === v3HumanSeat.id}
           />
         ),
       },
     ];
     return items.sort((a, b) => a.depth - b.depth || a.z - b.z);
-  }, [onSelect, selectedId, views]);
+  }, [onSelect, selectedId, views, activeAgentId, activeStatusText]);
 
   const activeZones = new Set(v3Zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
 

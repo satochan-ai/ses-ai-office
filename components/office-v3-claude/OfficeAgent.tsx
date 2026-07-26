@@ -202,9 +202,16 @@ type Props = {
   selected: boolean;
   dimmed: boolean;
   onSelect: (agentId: string) => void;
+  /**
+   * デモ進行中、このエージェントが現在の担当である場合だけ true。
+   * 元データ（duties/appearance/役割名/座標/固定ステータス）は一切変更せず、
+   * 表示層のオーバーライド（一時ステータスの追加表示・控えめな強調）に限定する。
+   */
+  isDemoActive?: boolean;
+  demoStatusText?: string;
 };
 
-export default function OfficeAgent({ view, selected, dimmed, onSelect }: Props) {
+export default function OfficeAgent({ view, selected, dimmed, onSelect, isDemoActive = false, demoStatusText }: Props) {
   const { placement, name, role } = view;
   const a = placement.appearance;
   const x = isoX(placement.gx, placement.gy);
@@ -244,6 +251,7 @@ export default function OfficeAgent({ view, selected, dimmed, onSelect }: Props)
       <ellipse className={s.agentHit} cx={0} cy={-64} rx={44} ry={78} />
       <ContactShadow rx={24} ry={12} opacity={0.22} />
       {selected ? <ellipse className={s.agentRing} cx={0} cy={0} rx={30} ry={15} /> : null}
+      {isDemoActive ? <ellipse className={s.demoActiveRing} cx={0} cy={-40} rx={50} ry={85} /> : null}
 
       <g transform={`scale(${placement.scale}) translate(0,0)`}>
         <g className={s.idle} transform={`scale(${flip}, 1) scale(1, ${a.stature})`}>
@@ -310,6 +318,15 @@ export default function OfficeAgent({ view, selected, dimmed, onSelect }: Props)
           {placement.shortRole}
         </text>
       </g>
+
+      {isDemoActive && demoStatusText ? (
+        <g className={s.demoActiveBadge} transform={`translate(${labelPos.lx}, ${labelPos.ly + 27})`}>
+          <rect x={0} y={-9} width={Math.max(boxW, demoStatusText.length * 12 + 18)} height={18} rx={7} />
+          <text x={9} y={4} textAnchor="start" className={s.demoActiveText}>
+            {demoStatusText}
+          </text>
+        </g>
+      ) : null}
     </g>
   );
 }

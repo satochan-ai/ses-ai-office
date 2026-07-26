@@ -10,6 +10,8 @@ type Props = {
   selected: boolean;
   dimmed: boolean;
   onSelect: (id: string) => void;
+  /** デモが人間承認待ちのときだけ true。静的な`seat`データは変更しない。 */
+  isDemoActive?: boolean;
 };
 
 /**
@@ -17,7 +19,7 @@ type Props = {
  * 指令席の壁面モニター2枚の間の狭い間隔に収まるよう、専用デスク・意思決定モニター・
  * 承認待ち通知・簡易ステータスだけをごく小さくまとめて「最終承認者の存在」を表現する。
  */
-export default function HumanSeat({ seat, selected, dimmed, onSelect }: Props) {
+export default function HumanSeat({ seat, selected, dimmed, onSelect, isDemoActive = false }: Props) {
   const x = isoX(seat.gx, seat.gy);
   const y = isoY(seat.gx, seat.gy);
 
@@ -63,6 +65,7 @@ export default function HumanSeat({ seat, selected, dimmed, onSelect }: Props) {
       ) : null}
 
       {selected ? <ellipse className={s.agentRing} cx={0} cy={-2} rx={24} ry={12} /> : null}
+      {isDemoActive ? <ellipse className={s.humanSeatDemoActive} cx={0} cy={-30} rx={40} ry={62} /> : null}
 
       {/* 常時ラベル：人間責任者／最終判断・承認（北東の契約管理ラベルと重ならないよう左寄りに配置） */}
       <g className={s.humanSeatLabel} transform="translate(-128,-84)">
