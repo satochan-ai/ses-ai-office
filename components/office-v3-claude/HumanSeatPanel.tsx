@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AlertTriangle, CheckCircle2, Gavel, RotateCcw, ShieldAlert, X } from "lucide-react";
 import type { V3AgentView, V3HumanSeat } from "@/types/officeV3Claude";
-import type { OfficeV3ApprovalState, OfficeV3DemoJob, OfficeV3DemoStatus } from "@/types/officeV3ClaudeDemo";
+import type { OfficeV3ApprovalState, OfficeV3DemoScenario, OfficeV3DemoStatus } from "@/types/officeV3ClaudeDemo";
 import s from "./OfficeV3.module.css";
 
 type Props = {
@@ -15,7 +15,9 @@ type Props = {
   /** 以下はデモ関連（未指定時は従来どおりの固定表示のみになる）。 */
   demoStatus?: OfficeV3DemoStatus;
   approvalState?: OfficeV3ApprovalState;
-  demoJob?: OfficeV3DemoJob;
+  /** 連打防止ロックは useOfficeV3ClaudeDemo 側の1本だけで行う（このパネル内では持たない）。 */
+  approvalLocked?: boolean;
+  scenario?: OfficeV3DemoScenario;
   demoStepTitle?: string;
   onApprove?: () => void;
   onReject?: () => void;
@@ -25,30 +27,19 @@ type Props = {
  * 人間責任者席専用の詳細パネル。AgentDetailPanel とは別コンポーネントとして分離し、
  * AI社員の詳細表示（AgentDetailPanel）には一切手を加えない。
  * デモ未実行時は既存の固定表示のみを行い、デモ関連props未指定時の見た目は変えない。
+ * 承認・差し戻しは DemoWorkspacePanel と同じ onApprove/onReject（useOfficeV3ClaudeDemo）を
+ * そのまま呼び出すだけで、処理を二重実装しない。
  */
 export default function HumanSeatPanel({
   seat, strategistView, managerView, qualityView, onClose,
-  demoStatus = "idle", approvalState = "none", demoJob, demoStepTitle, onApprove, onReject,
+  demoStatus = "idle", approvalState = "none", approvalLocked = false, scenario, demoStepTitle, onApprove, onReject,
 }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  // 承認・差し戻しボタンの連打防止。
-  // useState単体だと、setState の反映（再レンダー）を待つ間に同期的な連続クリックが
-  // 古いactionLocked値を読んでしまい素通りするため、即時反映されるrefで実際のロックを行う。
-  // useStateの方はボタンのdisabled表示（見た目の反映）専用に使う。
-  const actionLockRef = useRef(false);
-  const [actionLocked, setActionLocked] = useState(false);
 
   useEffect(() => {
     closeRef.current?.focus();
   }, [seat.id]);
-
-  useEffect(() => {
-    if (demoStatus === "awaiting-approval") {
-      actionLockRef.current = false;
-      setActionLocked(false);
-    }
-  }, [demoStatus]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -72,19 +63,6 @@ export default function HumanSeatPanel({
 
   // 承認待ち件数は静的データ(seat.pendingApprovals)を書き換えず、表示上だけデモ分を加算する。
   const displayPendingApprovals = seat.pendingApprovals + (demoStatus === "awaiting-approval" ? 1 : 0);
-
-  const handleApprove = () => {
-    if (actionLockRef.current) return;
-    actionLockRef.current = true;
-    setActionLocked(true);
-    onApprove?.();
-  };
-  const handleReject = () => {
-    if (actionLockRef.current) return;
-    actionLockRef.current = true;
-    setActionLocked(true);
-    onReject?.();
-  };
 
   return (
     <div
@@ -131,44 +109,47 @@ export default function HumanSeatPanel({
         </p>
       ) : null}
 
-      {demoStatus === "awaiting-approval" && demoJob ? (
+      {demoStatus === "awaiting-approval" && scenario ? (
         <>
           <dl className={s.demoJobCard}>
-            <div><dt>案件名</dt><dd>{demoJob.title}</dd></div>
-            <div><dt>顧客区分</dt><dd>{demoJob.clientType}</dd></div>
-            <div><dt>候補者数</dt><dd>{demoJob.candidateCount}名</dd></div>
-            <div><dt>最終候補者</dt><dd>{demoJob.finalCandidateCount}名</dd></div>
-            <div><dt>マッチングスコア</dt><dd>{demoJob.matchingScore}点</dd></div>
-            <div><dt>緊急度</dt><dd>{demoJob.urgency}</dd></div>
+            <div className={s.demoJobCardHead}>
+              <dt>{scenario.subjectLabel}</dt>
+              <dd>{scenario.subjectSummary}</dd>
+            </div>
+            {scenario.subjectDetails.map(row => (
+              <div key={row.label}><dt>{row.label}</dt><dd>{row.value}</dd></div>
+            ))}
           </dl>
 
           <section>
             <h3>AI品質管理の結果</h3>
             <ul className={s.detailList}>
-              <li><ShieldAlert size={12} aria-hidden="true" />品質基準を満たしました（修正後に再確認済み）</li>
+              <li><ShieldAlert size={12} aria-hidden="true" />{scenario.approvalSummary.qualityResult}</li>
             </ul>
           </section>
 
           <section>
             <h3>AI営業Mgrの判断</h3>
             <ul className={s.detailList}>
-              <li><Gavel size={12} aria-hidden="true" />重要案件として経営判断へ上げました</li>
+              <li><Gavel size={12} aria-hidden="true" />{scenario.approvalSummary.managerDecision}</li>
             </ul>
           </section>
 
-          <section>
-            <h3>AI経営参謀の提案</h3>
-            <ul className={s.detailList}>
-              <li><Gavel size={12} aria-hidden="true" />収益性・顧客関係・受注可能性を踏まえ、承認を提案します</li>
-            </ul>
-          </section>
+          {scenario.approvalSummary.strategistProposal ? (
+            <section>
+              <h3>AI経営参謀の提案</h3>
+              <ul className={s.detailList}>
+                <li><Gavel size={12} aria-hidden="true" />{scenario.approvalSummary.strategistProposal}</li>
+              </ul>
+            </section>
+          ) : null}
 
           <div className={s.humanApprovalActions}>
             <button
               type="button"
               className={`${s.humanApprovalButton} ${s.humanApprovalApprove}`}
-              onClick={handleApprove}
-              disabled={actionLocked}
+              onClick={onApprove}
+              disabled={approvalLocked}
             >
               <CheckCircle2 size={14} aria-hidden="true" />
               承認
@@ -176,8 +157,8 @@ export default function HumanSeatPanel({
             <button
               type="button"
               className={`${s.humanApprovalButton} ${s.humanApprovalReject}`}
-              onClick={handleReject}
-              disabled={actionLocked}
+              onClick={onReject}
+              disabled={approvalLocked}
             >
               <AlertTriangle size={14} aria-hidden="true" />
               差し戻し
@@ -189,7 +170,7 @@ export default function HumanSeatPanel({
       {demoStatus === "completed" ? (
         <p className={`${s.demoResultNote} ${s.demoResultApproved}`}>
           <CheckCircle2 size={13} aria-hidden="true" />
-          承認済み・提案準備完了
+          承認済み・準備完了
         </p>
       ) : null}
 

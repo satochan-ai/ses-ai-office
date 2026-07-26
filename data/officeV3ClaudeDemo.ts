@@ -2,111 +2,298 @@ import { HUMAN_SEAT_ID } from "@/data/officeV3ClaudeLayout";
 import type { OfficeV3DemoScenario } from "@/types/officeV3ClaudeDemo";
 
 /**
- * Claude版V3専用の固定デモシナリオ（1本のみ）。
- * 「案件受信から人間責任者承認まで」。
+ * Claude版V3専用の固定デモシナリオ（5本）。すべてモックデータであり、実案件・実在の
+ * 個人情報は含まない（田中一郎・山田太郎は説明のための架空人物）。
  *
  * 担当AIは既存の正式IDだけを使用する（新設なし）：
- * - manager     : AI営業Mgr（data/office.ts）
- * - matching    : AIマッチング担当（data/office.ts）
- * - proposal    : AI提案・面談支援担当（data/office.ts）
- * - quality     : AI品質管理担当（data/officeV3ClaudeAgents.ts）
- * - strategist  : AI経営参謀（data/officeV3ClaudeAgents.ts）
- * - HUMAN_SEAT_ID（"human-lead"） : 人間責任者席（data/officeV3ClaudeLayout.ts）
- *
- * 案件情報はすべてモックデータであり、実案件・個人情報は含まない。
+ * manager(AI営業Mgr) / analytics(AI分析担当) / newbiz(AI新規開拓担当) / bp(AIBP開拓担当) /
+ * matching(AIマッチング担当) / recruit(AI採用担当) / follow(AIフォロー担当) /
+ * relation(AI顧客リレーション担当) / proposal(AI提案・面談支援担当) / contract(AI契約・請求管理担当) /
+ * knowledge(AI教育・ナレッジ担当) / quality(AI品質管理担当) / strategist(AI経営参謀) /
+ * HUMAN_SEAT_ID（"human-lead"）: 人間責任者席
  */
-export const officeV3DemoScenario: OfficeV3DemoScenario = {
-  id: "proposal-approval",
-  title: "案件受信から人間責任者承認まで",
-  job: {
-    title: "Java業務システム開発支援",
-    clientType: "既存取引先",
-    requiredSkills: "Java、Spring Boot、基本設計",
-    workStyle: "リモート併用",
-    rate: "70万円",
-    urgency: "高",
-    candidateCount: 3,
-    finalCandidateCount: 1,
-    matchingScore: 88,
-  },
+
+const matchingScenario: OfficeV3DemoScenario = {
+  id: "matching-proposal",
+  title: "案件と人材のマッチング",
+  shortDescription: "案件受信から候補者選定、提案作成、人間承認までを再現します。",
+  category: "案件マッチング",
+  subjectLabel: "対象案件",
+  subjectSummary: "Java業務システム開発支援（既存取引先）",
+  subjectDetails: [
+    { label: "案件名", value: "Java業務システム開発支援" },
+    { label: "顧客区分", value: "既存取引先" },
+    { label: "必須スキル", value: "Java、Spring Boot、基本設計" },
+    { label: "勤務形態", value: "リモート併用" },
+    { label: "単価", value: "70万円" },
+    { label: "緊急度", value: "高" },
+    { label: "候補者数", value: "3名" },
+    { label: "最終候補者", value: "1名" },
+    { label: "マッチングスコア", value: "88点" },
+  ],
   steps: [
-    {
-      id: "step-01", title: "案件受信", agentId: "manager", statusText: "案件受信",
-      logs: ["Java業務システム開発支援案件を受信しました", "緊急度「高」として処理を開始します"],
-      durationMs: 2200,
-    },
-    {
-      id: "step-02", title: "案件情報整理", agentId: "manager", statusText: "案件整理中",
-      logs: ["必須条件と営業条件を整理しています", "Java、Spring Boot、基本設計を必須条件として登録しました"],
-      durationMs: 2200,
-    },
-    {
-      id: "step-03", title: "候補者抽出", agentId: "matching", statusText: "候補者検索中",
-      logs: ["登録人材から候補者を検索しています", "条件に近い候補者を3名抽出しました"],
-      durationMs: 2200,
-    },
-    {
-      id: "step-04", title: "適合度評価", agentId: "matching", statusText: "スキル判定中",
-      logs: ["必須条件と候補者スキルを照合しています", "最終候補者のマッチングスコアは88点です"],
-      durationMs: 2200,
-    },
-    {
-      id: "step-05", title: "提案内容作成", agentId: "proposal", statusText: "提案文作成中",
-      logs: ["候補者の強みを抽出しています", "顧客向けの推薦文を作成しました"],
-      durationMs: 2400,
-    },
-    {
-      id: "step-06", title: "品質確認", agentId: "quality", statusText: "品質確認中",
-      logs: ["必須条件、表現、誤記を確認しています", "軽微な修正が必要と判定しました"],
-      durationMs: 2400,
-    },
-    {
-      id: "step-07", title: "自動修正", agentId: "proposal", statusText: "修正対応中",
-      logs: ["AI品質管理から修正指示を受けました", "経験年数の表現と推薦理由を修正しました"],
-      durationMs: 2200,
-    },
-    {
-      id: "step-08", title: "再品質確認", agentId: "quality", statusText: "再確認中",
-      logs: ["修正後の提案内容を再確認しています", "品質基準を満たしました"],
-      durationMs: 2000,
-    },
-    {
-      id: "step-09", title: "営業判断", agentId: "manager", statusText: "営業判断中",
-      logs: ["提案優先度と顧客関係を確認しています", "重要案件として経営判断へ上げます"],
-      durationMs: 2200,
-    },
-    {
-      id: "step-10", title: "経営視点での確認", agentId: "strategist", statusText: "経営判断案を作成中",
-      logs: ["収益性、顧客関係、受注可能性を分析しています", "人間責任者へ承認を申請します"],
-      durationMs: 2400,
-    },
-    {
-      id: "step-11", title: "人間承認待ち", agentId: HUMAN_SEAT_ID, statusText: "承認待ち",
-      logs: ["人間責任者の最終判断を待っています"],
-      durationMs: 0, requiresHumanApproval: true,
-    },
-    {
-      id: "step-12", title: "完了", agentId: "manager", statusText: "提案準備完了",
-      // 「人間責任者が提案を承認しました」は承認操作そのものの記録として useOfficeV3ClaudeDemo 側で追加する。
-      logs: ["顧客への提案準備が完了しました"],
-      durationMs: 2000,
-    },
+    { id: "m-01", title: "案件受信", agentId: "manager", statusText: "案件受信", durationMs: 900,
+      logs: ["Java業務システム開発支援案件を受信しました", "緊急度「高」として処理を開始します"] },
+    { id: "m-02", title: "案件条件整理", agentId: "manager", statusText: "案件整理中", durationMs: 900,
+      logs: ["Java、Spring Boot、基本設計を必須条件として登録しました"] },
+    { id: "m-03", title: "候補者抽出", agentId: "matching", statusText: "候補者検索中", durationMs: 900,
+      logs: ["条件に近い候補者を3名抽出しました"] },
+    { id: "m-04", title: "適合度評価", agentId: "matching", statusText: "スキル判定中", durationMs: 1000,
+      logs: ["最終候補者のマッチングスコアは88点です"] },
+    { id: "m-05", title: "提案文作成", agentId: "proposal", statusText: "提案文作成中", durationMs: 1000,
+      logs: ["候補者の強みを抽出し、顧客向け推薦文を作成しました"] },
+    { id: "m-06", title: "品質確認", agentId: "quality", statusText: "品質確認中", durationMs: 1500,
+      logs: ["必須条件・表現・誤記を確認し、軽微な修正が必要と判定しました"] },
+    { id: "m-07", title: "修正", agentId: "proposal", statusText: "修正対応中", durationMs: 900,
+      logs: ["経験年数の表現と推薦理由を修正しました"] },
+    { id: "m-08", title: "再確認", agentId: "quality", statusText: "再確認中", durationMs: 1300,
+      logs: ["修正後の提案内容を再確認し、品質基準を満たしました"] },
+    { id: "m-09", title: "営業判断", agentId: "manager", statusText: "営業判断中", durationMs: 1500,
+      logs: ["重要案件として経営判断へ上げます"] },
+    { id: "m-10", title: "経営視点確認", agentId: "strategist", statusText: "経営判断案を作成中", durationMs: 1600,
+      logs: ["収益性・顧客関係・受注可能性を分析し、人間責任者へ承認を申請します"] },
+    { id: "m-11", title: "人間承認", agentId: HUMAN_SEAT_ID, statusText: "承認待ち", durationMs: 0, requiresHumanApproval: true,
+      logs: ["人間責任者の最終判断を待っています"] },
+    { id: "m-12", title: "提案準備完了", agentId: "manager", statusText: "提案準備完了", durationMs: 1000,
+      logs: ["顧客への提案準備が完了しました"] },
   ],
   rejectionSteps: [
-    {
-      id: "reject-01", title: "差し戻し内容確認", agentId: "quality", statusText: "差し戻し内容確認中",
-      logs: ["AI品質管理が人間責任者からの差し戻し内容を確認しています"],
-      durationMs: 2000,
-    },
-    {
-      id: "reject-02", title: "再修正対応", agentId: "proposal", statusText: "提案内容を再修正中",
-      logs: ["AI提案・面談支援担当が指摘内容をもとに提案内容を再修正しています"],
-      durationMs: 2400,
-    },
-    {
-      id: "reject-03", title: "再確認", agentId: "quality", statusText: "再確認中",
-      logs: ["修正後の提案内容を再確認しています", "品質基準を満たしました"],
-      durationMs: 2000,
-    },
+    { id: "m-r1", title: "差し戻し内容確認", agentId: "quality", statusText: "差し戻し内容確認中", durationMs: 900,
+      logs: ["AI品質管理が人間責任者からの差し戻し内容を確認しています"] },
+    { id: "m-r2", title: "再修正対応", agentId: "proposal", statusText: "提案内容を再修正中", durationMs: 1200,
+      logs: ["AI提案・面談支援担当が指摘内容をもとに提案内容を再修正しています"] },
+    { id: "m-r3", title: "再確認", agentId: "quality", statusText: "再確認中", durationMs: 900,
+      logs: ["修正後の提案内容を再確認し、品質基準を満たしました"] },
   ],
+  approvalSummary: {
+    title: "提案内容の最終確認",
+    metrics: [{ label: "最終候補者", value: "1名" }, { label: "マッチングスコア", value: "88点" }],
+    qualityResult: "品質基準を満たしました（修正後に再確認済み）",
+    managerDecision: "重要案件として経営判断へ上げました",
+    strategistProposal: "収益性・顧客関係・受注可能性を踏まえ、承認を提案します",
+  },
 };
+
+const newClientScenario: OfficeV3DemoScenario = {
+  id: "new-client-outreach",
+  title: "新規顧客開拓",
+  shortDescription: "新規開拓候補企業への初回アプローチ準備を再現します。",
+  category: "新規開拓",
+  subjectLabel: "対象企業",
+  subjectSummary: "株式会社ネクストリンク（Webサービス／従業員120名）",
+  subjectDetails: [
+    { label: "対象企業", value: "株式会社ネクストリンク" },
+    { label: "業種", value: "Webサービス" },
+    { label: "従業員数", value: "120名" },
+    { label: "想定課題", value: "開発人材不足" },
+    { label: "接点", value: "交流会で名刺交換" },
+    { label: "優先度", value: "高" },
+  ],
+  steps: [
+    { id: "n-01", title: "対象企業情報を受信", agentId: "newbiz", statusText: "企業情報受信", durationMs: 900,
+      logs: ["株式会社ネクストリンクの企業情報を受信しました"] },
+    { id: "n-02", title: "企業情報分析", agentId: "analytics", statusText: "企業分析中", durationMs: 900,
+      logs: ["従業員数・事業内容・採用動向を分析しています"] },
+    { id: "n-03", title: "課題仮説作成", agentId: "analytics", statusText: "課題仮説作成中", durationMs: 1000,
+      logs: ["開発人材不足の課題仮説を作成しました"] },
+    { id: "n-04", title: "アプローチ方針作成", agentId: "newbiz", statusText: "方針作成中", durationMs: 900,
+      logs: ["交流会での接点を踏まえたアプローチ方針を作成しました"] },
+    { id: "n-05", title: "初回メール案作成", agentId: "proposal", statusText: "メール文面作成中", durationMs: 1000,
+      logs: ["初回アプローチメールの文面を作成しました"] },
+    { id: "n-06", title: "品質確認", agentId: "quality", statusText: "品質確認中", durationMs: 1500,
+      logs: ["文面・表現に問題がないか確認し、品質基準を満たしました"] },
+    { id: "n-07", title: "営業Mgr確認", agentId: "manager", statusText: "営業判断中", durationMs: 1500,
+      logs: ["優先アプローチ先として営業判断を行いました"] },
+    { id: "n-08", title: "経営参謀による優先度確認", agentId: "strategist", statusText: "優先度確認中", durationMs: 1600,
+      logs: ["開発人材不足という課題仮説の確度は高いと判断しました"] },
+    { id: "n-09", title: "人間承認", agentId: HUMAN_SEAT_ID, statusText: "承認待ち", durationMs: 0, requiresHumanApproval: true,
+      logs: ["人間責任者の最終判断を待っています"] },
+    { id: "n-10", title: "アプローチ準備完了", agentId: "newbiz", statusText: "アプローチ準備完了", durationMs: 1000,
+      logs: ["初回アプローチの準備が完了しました"] },
+  ],
+  rejectionSteps: [
+    { id: "n-r1", title: "差し戻し内容確認", agentId: "quality", statusText: "差し戻し内容確認中", durationMs: 900,
+      logs: ["AI品質管理が人間責任者からの差し戻し内容を確認しています"] },
+    { id: "n-r2", title: "メール再修正", agentId: "proposal", statusText: "メール文面を再修正中", durationMs: 1200,
+      logs: ["指摘内容をもとに初回メール文面を再修正しています"] },
+    { id: "n-r3", title: "再確認", agentId: "quality", statusText: "再確認中", durationMs: 900,
+      logs: ["修正後の文面を再確認し、品質基準を満たしました"] },
+  ],
+  approvalSummary: {
+    title: "アプローチ方針の最終確認",
+    metrics: [{ label: "対象企業", value: "株式会社ネクストリンク" }, { label: "優先度", value: "高" }],
+    qualityResult: "文面・表現に問題なし（品質基準を満たしました）",
+    managerDecision: "優先アプローチ先として承認を推奨します",
+    strategistProposal: "開発人材不足という課題仮説の確度は高く、早期接触を提案します",
+  },
+};
+
+const bpAllianceScenario: OfficeV3DemoScenario = {
+  id: "bp-alliance",
+  title: "BPパートナー開拓",
+  shortDescription: "BPパートナー候補との協業提案準備を再現します。",
+  category: "BP開拓",
+  subjectLabel: "対象BP企業",
+  subjectSummary: "株式会社テックパートナーズ（Java・AWS技術者を保有）",
+  subjectDetails: [
+    { label: "対象企業", value: "株式会社テックパートナーズ" },
+    { label: "保有人材", value: "Java・AWS技術者" },
+    { label: "希望条件", value: "基本リモート併用" },
+    { label: "取引実績", value: "なし" },
+    { label: "想定連携", value: "案件・人材交換" },
+    { label: "優先度", value: "中" },
+  ],
+  steps: [
+    { id: "b-01", title: "BP候補企業を受信", agentId: "bp", statusText: "候補企業受信", durationMs: 900,
+      logs: ["株式会社テックパートナーズをBP候補として受信しました"] },
+    { id: "b-02", title: "企業情報確認", agentId: "bp", statusText: "企業情報確認中", durationMs: 900,
+      logs: ["保有人材と希望条件を確認しています"] },
+    { id: "b-03", title: "取引実績確認", agentId: "contract", statusText: "取引実績確認中", durationMs: 1000,
+      logs: ["過去の取引実績を確認し、新規取引先であることを確認しました"] },
+    { id: "b-04", title: "保有人材と案件傾向を分析", agentId: "analytics", statusText: "人材傾向分析中", durationMs: 1000,
+      logs: ["Java・AWS技術者の保有割合と自社案件傾向を分析しています"] },
+    { id: "b-05", title: "自社との補完関係を判定", agentId: "matching", statusText: "補完関係判定中", durationMs: 1000,
+      logs: ["自社案件・人材との補完関係が高いと判定しました"] },
+    { id: "b-06", title: "協業提案文を作成", agentId: "bp", statusText: "協業提案文作成中", durationMs: 1200,
+      logs: ["案件・人材交換を軸とした協業提案文を作成しました"] },
+    { id: "b-07", title: "品質確認", agentId: "quality", statusText: "品質確認中", durationMs: 1500,
+      logs: ["協業提案文の内容を確認し、品質基準を満たしました"] },
+    { id: "b-08", title: "営業Mgr判断", agentId: "manager", statusText: "営業判断中", durationMs: 1500,
+      logs: ["協業候補として営業判断を行いました"] },
+    { id: "b-09", title: "人間承認", agentId: HUMAN_SEAT_ID, statusText: "承認待ち", durationMs: 0, requiresHumanApproval: true,
+      logs: ["人間責任者の最終判断を待っています"] },
+    { id: "b-10", title: "BP面談依頼準備完了", agentId: "bp", statusText: "面談依頼準備完了", durationMs: 1000,
+      logs: ["BP面談依頼の準備が完了しました"] },
+  ],
+  rejectionSteps: [
+    { id: "b-r1", title: "差し戻し内容確認", agentId: "quality", statusText: "差し戻し内容確認中", durationMs: 900,
+      logs: ["AI品質管理が人間責任者からの差し戻し内容を確認しています"] },
+    { id: "b-r2", title: "提案文再修正", agentId: "bp", statusText: "協業提案文を再修正中", durationMs: 1200,
+      logs: ["指摘内容をもとに協業提案文を再修正しています"] },
+    { id: "b-r3", title: "再確認", agentId: "quality", statusText: "再確認中", durationMs: 900,
+      logs: ["修正後の提案文を再確認し、品質基準を満たしました"] },
+  ],
+  approvalSummary: {
+    title: "協業提案内容の最終確認",
+    metrics: [{ label: "対象企業", value: "株式会社テックパートナーズ" }, { label: "優先度", value: "中" }],
+    qualityResult: "協業提案文の品質基準を満たしました",
+    managerDecision: "案件・人材交換の協業候補として承認を推奨します",
+  },
+};
+
+const candidateScreeningScenario: OfficeV3DemoScenario = {
+  id: "candidate-screening",
+  title: "採用候補者の選考支援",
+  shortDescription: "応募者の選考支援から面接案内準備までを再現します。",
+  category: "採用選考",
+  subjectLabel: "対象候補者",
+  subjectSummary: "田中一郎（モック・架空の人物）／Java開発5年",
+  subjectDetails: [
+    { label: "候補者", value: "田中一郎（モック・架空の人物）" },
+    { label: "経験", value: "Java開発5年" },
+    { label: "希望年収", value: "550万円" },
+    { label: "希望勤務", value: "リモート併用" },
+    { label: "応募職種", value: "システムエンジニア" },
+    { label: "書類評価", value: "82点" },
+  ],
+  steps: [
+    { id: "c-01", title: "応募情報を受信", agentId: "recruit", statusText: "応募情報受信", durationMs: 900,
+      logs: ["田中一郎さん（モック）の応募情報を受信しました"] },
+    { id: "c-02", title: "経歴整理", agentId: "recruit", statusText: "経歴整理中", durationMs: 900,
+      logs: ["Java開発5年の経歴を整理しました"] },
+    { id: "c-03", title: "求人要件との照合", agentId: "matching", statusText: "要件照合中", durationMs: 1000,
+      logs: ["応募職種の必須要件と照合しています"] },
+    { id: "c-04", title: "技術スキル評価", agentId: "matching", statusText: "スキル評価中", durationMs: 1000,
+      logs: ["Java開発スキルの評価を行いました"] },
+    { id: "c-05", title: "キャリア適合性評価", agentId: "recruit", statusText: "適合性評価中", durationMs: 1000,
+      logs: ["希望条件と募集条件の適合性を評価しました"] },
+    { id: "c-06", title: "面接質問作成", agentId: "knowledge", statusText: "面接質問作成中", durationMs: 1300,
+      logs: ["過去の選考事例をもとに面接質問を作成しました"] },
+    { id: "c-07", title: "品質確認", agentId: "quality", statusText: "品質確認中", durationMs: 1500,
+      logs: ["評価内容・面接質問を確認し、品質基準を満たしました"] },
+    { id: "c-08", title: "採用判断案作成", agentId: "manager", statusText: "採用判断中", durationMs: 1500,
+      logs: ["面接案内へ進める候補として判断案を作成しました"] },
+    { id: "c-09", title: "人間承認", agentId: HUMAN_SEAT_ID, statusText: "承認待ち", durationMs: 0, requiresHumanApproval: true,
+      logs: ["人間責任者の最終判断を待っています"] },
+    { id: "c-10", title: "面接案内準備完了", agentId: "recruit", statusText: "面接案内準備完了", durationMs: 1000,
+      logs: ["面接案内の準備が完了しました"] },
+  ],
+  rejectionSteps: [
+    { id: "c-r1", title: "差し戻し内容確認", agentId: "quality", statusText: "差し戻し内容確認中", durationMs: 900,
+      logs: ["AI品質管理が人間責任者からの差し戻し内容を確認しています"] },
+    { id: "c-r2", title: "質問再修正", agentId: "knowledge", statusText: "面接質問を再修正中", durationMs: 1200,
+      logs: ["指摘内容をもとに面接質問を再修正しています"] },
+    { id: "c-r3", title: "再確認", agentId: "quality", statusText: "再確認中", durationMs: 900,
+      logs: ["修正後の内容を再確認し、品質基準を満たしました"] },
+  ],
+  approvalSummary: {
+    title: "採用判断の最終確認",
+    metrics: [{ label: "候補者", value: "田中一郎（モック）" }, { label: "書類評価", value: "82点" }],
+    qualityResult: "面接質問・評価内容の品質基準を満たしました",
+    managerDecision: "面接案内へ進める候補として承認を推奨します",
+  },
+};
+
+const engineerFollowupScenario: OfficeV3DemoScenario = {
+  id: "engineer-followup",
+  title: "稼働中エンジニアのフォロー",
+  shortDescription: "稼働中エンジニアのフォロー方針検討を再現します。",
+  category: "稼働フォロー",
+  subjectLabel: "対象エンジニア",
+  subjectSummary: "山田太郎（モック・架空の人物）／参画3か月",
+  subjectDetails: [
+    { label: "対象者", value: "山田太郎（モック・架空の人物）" },
+    { label: "参画期間", value: "3か月" },
+    { label: "最近の状況", value: "残業増加" },
+    { label: "顧客評価", value: "良好" },
+    { label: "本人コメント", value: "業務負荷が高い" },
+    { label: "リスク判定", value: "要確認" },
+  ],
+  steps: [
+    { id: "f-01", title: "稼働状況を受信", agentId: "follow", statusText: "稼働状況受信", durationMs: 900,
+      logs: ["山田太郎さん（モック）の稼働状況を受信しました"] },
+    { id: "f-02", title: "残業・負荷を分析", agentId: "analytics", statusText: "負荷分析中", durationMs: 1000,
+      logs: ["残業時間の推移を分析し、増加傾向を確認しました"] },
+    { id: "f-03", title: "本人コメントを確認", agentId: "follow", statusText: "コメント確認中", durationMs: 900,
+      logs: ["「業務負荷が高い」という本人コメントを確認しました"] },
+    { id: "f-04", title: "顧客状況を確認", agentId: "relation", statusText: "顧客状況確認中", durationMs: 1000,
+      logs: ["顧客評価は良好であることを確認しました"] },
+    { id: "f-05", title: "リスク判定", agentId: "analytics", statusText: "リスク判定中", durationMs: 1300,
+      logs: ["残業増加と本人コメントから、要確認レベルのリスクと判定しました"] },
+    { id: "f-06", title: "フォロー方針作成", agentId: "follow", statusText: "方針作成中", durationMs: 1000,
+      logs: ["業務負荷軽減に向けたフォロー方針を作成しました"] },
+    { id: "f-07", title: "品質確認", agentId: "quality", statusText: "品質確認中", durationMs: 1500,
+      logs: ["フォロー方針の内容を確認し、品質基準を満たしました"] },
+    { id: "f-08", title: "営業Mgr判断", agentId: "manager", statusText: "営業判断中", durationMs: 1500,
+      logs: ["早期フォローが必要な案件として営業判断を行いました"] },
+    { id: "f-09", title: "経営参謀によるリスク確認", agentId: "strategist", statusText: "リスク確認中", durationMs: 1600,
+      logs: ["顧客評価と契約継続の見込みを踏まえてリスクを確認しました"] },
+    { id: "f-10", title: "人間承認", agentId: HUMAN_SEAT_ID, statusText: "承認待ち", durationMs: 0, requiresHumanApproval: true,
+      logs: ["人間責任者の最終判断を待っています"] },
+    { id: "f-11", title: "フォロー実施準備完了", agentId: "follow", statusText: "フォロー準備完了", durationMs: 1000,
+      logs: ["フォロー実施の準備が完了しました"] },
+  ],
+  rejectionSteps: [
+    { id: "f-r1", title: "差し戻し内容確認", agentId: "quality", statusText: "差し戻し内容確認中", durationMs: 900,
+      logs: ["AI品質管理が人間責任者からの差し戻し内容を確認しています"] },
+    { id: "f-r2", title: "方針再修正", agentId: "follow", statusText: "フォロー方針を再修正中", durationMs: 1200,
+      logs: ["指摘内容をもとにフォロー方針を再修正しています"] },
+    { id: "f-r3", title: "再確認", agentId: "quality", statusText: "再確認中", durationMs: 900,
+      logs: ["修正後の方針を再確認し、品質基準を満たしました"] },
+  ],
+  approvalSummary: {
+    title: "フォロー方針の最終確認",
+    metrics: [{ label: "対象者", value: "山田太郎（モック）" }, { label: "リスク判定", value: "要確認" }],
+    qualityResult: "フォロー方針の品質基準を満たしました",
+    managerDecision: "早期フォローが必要な案件として承認を推奨します",
+    strategistProposal: "顧客評価は良好なため、契約継続を前提としたフォロー強化を提案します",
+  },
+};
+
+export const officeV3ClaudeDemoScenarios: OfficeV3DemoScenario[] = [
+  matchingScenario,
+  newClientScenario,
+  bpAllianceScenario,
+  candidateScreeningScenario,
+  engineerFollowupScenario,
+];

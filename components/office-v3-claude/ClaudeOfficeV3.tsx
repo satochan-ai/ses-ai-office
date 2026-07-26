@@ -9,8 +9,7 @@ import { HUMAN_SEAT_ID, v3AgentPlacements, v3CentralTeamPlacements, v3Areas, v3H
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
 import type { V3AgentView, V3AreaId } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
-import DemoActivityLog from "./DemoActivityLog";
-import DemoControlPanel from "./DemoControlPanel";
+import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import s from "./OfficeV3.module.css";
@@ -71,6 +70,13 @@ export default function ClaudeOfficeV3() {
     });
   }, []);
 
+  // デモパネルで「現在担当AI」の表示名を出すためのID→名前マップ（人間責任者席も含む）。
+  const agentNames = useMemo(() => {
+    const map: Record<string, string> = { [HUMAN_SEAT_ID]: v3HumanSeat.label };
+    views.forEach(view => { map[view.placement.agentId] = view.name; });
+    return map;
+  }, [views]);
+
   const selected = views.find(view => view.placement.agentId === selectedId) ?? null;
   const isHumanSeatSelected = selectedId === HUMAN_SEAT_ID;
   const close = useCallback(() => setSelectedId(null), []);
@@ -102,14 +108,6 @@ export default function ClaudeOfficeV3() {
         </div>
       </header>
 
-      <DemoControlPanel
-        demoStatus={demo.demoStatus}
-        scenario={demo.scenario}
-        currentStep={demo.currentStep}
-        onStart={demo.startDemo}
-        onReset={demo.resetDemo}
-      />
-
       <nav className={s.areaBar} aria-label="表示エリアの切り替え">
         {v3Areas.map(item => (
           <button
@@ -126,42 +124,62 @@ export default function ClaudeOfficeV3() {
       </nav>
 
       <main className={s.stage}>
-        <div className={s.viewport}>
-          <OfficeScene
-            views={views}
-            selectedId={selectedId}
-            area={area}
-            compact={compact}
-            onSelect={select}
-            activeAgentId={demo.activeAgentId}
-            activeStatusText={demo.activeStatusText}
-          />
+        <div className={s.officeColumn}>
+          <div className={s.viewport}>
+            <OfficeScene
+              views={views}
+              selectedId={selectedId}
+              area={area}
+              compact={compact}
+              onSelect={select}
+              activeAgentId={demo.activeAgentId}
+              activeStatusText={demo.activeStatusText}
+            />
+          </div>
+          {selected ? (
+            <AgentDetailPanel view={selected} onClose={close} />
+          ) : isHumanSeatSelected ? (
+            <HumanSeatPanel
+              seat={v3HumanSeat}
+              managerView={managerView}
+              qualityView={qualityView}
+              strategistView={strategistView}
+              onClose={close}
+              demoStatus={demo.demoStatus}
+              approvalState={demo.approvalState}
+              approvalLocked={demo.approvalLocked}
+              scenario={demo.selectedScenario}
+              demoStepTitle={demo.currentStep?.title}
+              onApprove={demo.approve}
+              onReject={demo.reject}
+            />
+          ) : null}
         </div>
-        {selected ? (
-          <AgentDetailPanel view={selected} onClose={close} />
-        ) : isHumanSeatSelected ? (
-          <HumanSeatPanel
-            seat={v3HumanSeat}
-            managerView={managerView}
-            qualityView={qualityView}
-            strategistView={strategistView}
-            onClose={close}
+
+        <div className={s.demoSidebar}>
+          <DemoWorkspacePanel
+            scenarios={demo.scenarios}
+            selectedScenarioId={demo.selectedScenarioId}
+            selectedScenario={demo.selectedScenario}
+            selectScenario={demo.selectScenario}
             demoStatus={demo.demoStatus}
             approvalState={demo.approvalState}
-            demoJob={demo.scenario.job}
-            demoStepTitle={demo.currentStep?.title}
-            onApprove={demo.approve}
-            onReject={demo.reject}
+            approvalLocked={demo.approvalLocked}
+            currentStep={demo.currentStep}
+            currentStepIndex={demo.currentStepIndex}
+            totalSteps={demo.totalSteps}
+            progressPercent={demo.progressPercent}
+            activeAgentId={demo.activeAgentId}
+            activeStatusText={demo.activeStatusText}
+            agentNames={agentNames}
+            logs={demo.logs}
+            startDemo={demo.startDemo}
+            resetDemo={demo.resetDemo}
+            approve={demo.approve}
+            reject={demo.reject}
           />
-        ) : null}
+        </div>
       </main>
-
-      <DemoActivityLog
-        logs={demo.logs}
-        demoStatus={demo.demoStatus}
-        currentStepTitle={demo.currentStep?.title}
-        limit={compact ? 3 : 5}
-      />
 
       <p className={s.hint}>
         <MousePointerClick size={13} aria-hidden="true" />

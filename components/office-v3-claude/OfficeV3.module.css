@@ -166,6 +166,17 @@
   position: relative;
   max-width: 1420px;
   margin: 0 auto;
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+}
+
+/* オフィス本体（+選択時の詳細パネル）専用の列。デモサイドバーとは別カラムにすることで、
+   詳細パネルとデモパネルが同じ右側に2枚重ならないようにする。 */
+.officeColumn {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .viewport {
@@ -716,29 +727,43 @@
   color: #cdeed4;
 }
 
-.demoResultRejected {
-  background: rgba(226, 184, 119, 0.14);
-  border: 1px solid rgba(226, 184, 119, 0.4);
-  color: #f3e2c2;
+/* ---------------- デモワークスペース（右側サイドバー） ---------------- */
+
+.demoSidebar {
+  flex: 0 0 340px;
+  width: 340px;
+  max-width: 360px;
+  min-height: 0;
+  display: flex;
 }
 
-/* ---------------- デモ操作パネル ---------------- */
-
-.demoPanel {
+.demoWorkspace {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
   display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-  max-width: 1420px;
-  margin: 0 auto 6px;
-  padding: 7px 12px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
   border: 1px solid var(--v3-line);
-  border-radius: 11px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
-  font-size: 11px;
+  overflow-y: auto;
+  /* .stageはflexboxの性質上、内容が多い列に合わせて行全体の高さが伸びてしまうため
+     （align-items:stretchだけでは列同士の高さを相互に制限し合えない）、
+     このパネル自身にビューポート基準の上限を設け、はみ出した分は内部スクロールへ閉じ込める。
+     ヘッダー・エリア切替・余白のおおよその高さ(約185px)を差し引いた値。 */
+  max-height: calc(100vh - 185px);
+}
+
+.demoWorkspaceHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .demoPanelTag {
+  align-self: flex-start;
   flex: none;
   font-size: 9px;
   font-weight: 800;
@@ -749,53 +774,71 @@
   padding: 2px 6px;
 }
 
-.demoPanelTitle {
-  font-weight: 700;
+.demoScenarioSelectWrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.demoScenarioSelectWrap > span {
+  font-size: 9px;
+  letter-spacing: 0.6px;
+  color: #8e97a6;
+}
+
+.demoScenarioSelectWrap select {
+  appearance: none;
+  width: 100%;
+  border: 1px solid var(--v3-line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--v3-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 26px 7px 9px;
+  cursor: pointer;
 }
 
-.demoPanelSub {
+.demoScenarioSelectWrap select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.demoScenarioSelectWrap select:focus-visible {
+  outline: 3px solid rgba(226, 184, 119, 0.55);
+  outline-offset: 2px;
+}
+
+.demoScenarioSelectIcon {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
   color: var(--v3-muted);
+  pointer-events: none;
+}
+
+.demoScenarioDesc {
+  margin: 0;
   font-size: 10px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.6;
+  color: var(--v3-muted);
 }
 
-.demoPanelDot {
-  flex: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--v3-muted);
-}
-
-.demoPanelDotRunning {
-  background: #7fa8d6;
-  animation: v3-demo-pulse 1.6s ease-in-out infinite;
-}
-
-.demoPanelDotWaiting {
-  background: #e2b877;
-  animation: v3-demo-pulse 1.6s ease-in-out infinite;
-}
-
-.demoPanelDoneIcon {
-  color: #8fbf9c;
+.demoWorkspaceActions {
+  display: flex;
+  gap: 8px;
 }
 
 .demoPanelPrimary,
 .demoPanelGhost {
-  flex: none;
-  margin-left: auto;
+  flex: 1;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   border-radius: 8px;
-  padding: 5px 10px;
+  padding: 7px 10px;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -828,57 +871,181 @@
   outline-offset: 2px;
 }
 
-/* ---------------- デモ処理ログ ---------------- */
+/* ---------------- 進捗表示 ---------------- */
 
-.demoLog {
-  max-width: 1420px;
-  margin: 8px auto 0;
-  padding: 8px 12px;
+.demoProgress {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--v3-line);
-  border-radius: 11px;
-  background: rgba(255, 255, 255, 0.03);
 }
 
-.demoLog header {
+.demoProgressHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 10px;
+  font-weight: 700;
+  color: #f0d3a4;
+}
+
+.demoProgressBar {
+  margin-top: 6px;
+  height: 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.demoProgressFill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e2b877, #f0d3a4);
+  transition: width 0.4s ease-out;
+}
+
+.demoProgressStep {
+  margin: 7px 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v3-ink);
+}
+
+.demoProgressRejectedTag {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #f3e2c2;
+  background: rgba(226, 184, 119, 0.18);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+
+.demoProgressAgent {
+  margin: 3px 0 0;
+  font-size: 10px;
+  color: var(--v3-muted);
+}
+
+/* ---------------- 対象データ概要（人間責任者パネルと共通） ---------------- */
+
+.demoJobCardHead {
+  grid-column: 1 / -1;
+  padding-bottom: 6px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--v3-line);
+}
+
+.demoJobCardHead dd {
+  font-size: 11px;
+}
+
+/* ---------------- 承認カード（デモパネル内） ---------------- */
+
+.demoApprovalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(226, 184, 119, 0.08);
+  border: 1px solid rgba(226, 184, 119, 0.3);
+}
+
+.demoApprovalCard h3 {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  color: #f0d3a4;
+  font-weight: 800;
+}
+
+/* ---------------- 完了結果カード ---------------- */
+
+.demoResultCard {
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: rgba(143, 191, 156, 0.1);
+  border: 1px solid rgba(143, 191, 156, 0.35);
+}
+
+.demoResultCard h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #cdeed4;
+}
+
+.demoResultCard dl {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px 10px;
+  margin: 0;
+}
+
+.demoResultCard dt {
+  font-size: 8px;
+  letter-spacing: 0.4px;
+  color: #8e97a6;
+  margin: 0;
+}
+
+.demoResultCard dd {
+  font-size: 10px;
+  color: var(--v3-ink);
+  margin: 1px 0 0;
+  font-weight: 600;
+}
+
+/* ---------------- デモ処理ログ（サイドバー内） ---------------- */
+
+.demoLogPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+.demoLogPanelHead {
   display: flex;
   align-items: center;
   gap: 6px;
   color: var(--v3-muted);
   font-size: 10px;
   font-weight: 700;
-  margin-bottom: 5px;
 }
 
-.demoLogStep,
-.demoLogDone {
+.demoLogToggle {
   margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  border: none;
+  background: none;
+  color: #e2b877;
   font-size: 9px;
   font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--v3-ink);
-  white-space: nowrap;
+  cursor: pointer;
+  padding: 2px 4px;
 }
 
-.demoLogDone {
-  color: #8fbf9c;
-  background: rgba(143, 191, 156, 0.14);
+.demoLogToggle:focus-visible {
+  outline: 3px solid rgba(226, 184, 119, 0.55);
+  outline-offset: 2px;
 }
 
-.demoLog ol {
+.demoWorkspace ol {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
-.demoLog li {
+.demoWorkspace ol li {
   font-size: 10px;
   line-height: 1.5;
   color: #c7cedb;
@@ -887,6 +1054,12 @@
 .demoLogLatest {
   color: var(--v3-ink);
   font-weight: 600;
+}
+
+.demoLogScroll {
+  max-height: 140px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 /* ---------------- 補足 ---------------- */
@@ -953,11 +1126,6 @@
   to { stroke-dashoffset: -18; }
 }
 
-@keyframes v3-demo-pulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
-}
-
 @keyframes v3-demo-ring {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.85; }
@@ -1017,27 +1185,41 @@
     margin-top: 12px;
   }
 
-  .demoPanel {
-    font-size: 10px;
-    padding: 6px 10px;
+  /* モバイルは左右2カラムにせず縦積みにし、デモ操作パネルを一番上へ出す。 */
+  .stage {
+    flex-direction: column;
+    align-items: stretch;
   }
 
-  .demoPanelSub {
-    display: none;
+  .demoSidebar {
+    order: -1;
+    flex: none;
+    width: auto;
+    max-width: none;
+    margin-bottom: 10px;
+  }
+
+  .demoWorkspace {
+    max-height: none;
+    overflow-y: visible;
+  }
+
+  .demoWorkspaceActions {
+    font-size: 10px;
   }
 
   .demoPanelPrimary,
   .demoPanelGhost {
-    padding: 5px 8px;
+    padding: 6px 8px;
     font-size: 10px;
   }
 
-  .demoLog {
-    padding: 7px 10px;
+  .demoWorkspace ol li {
+    font-size: 9px;
   }
 
-  .demoLog li {
-    font-size: 9px;
+  .demoLogScroll {
+    max-height: 120px;
   }
 }
 
@@ -1053,10 +1235,9 @@
   .eye,
   .detail,
   .connectorLine,
-  .demoPanelDotRunning,
-  .demoPanelDotWaiting,
   .demoActiveRing,
-  .humanSeatDemoActive {
+  .humanSeatDemoActive,
+  .demoProgressFill {
     animation: none !important;
     transition: none !important;
   }

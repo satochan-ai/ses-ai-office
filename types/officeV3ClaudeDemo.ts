@@ -1,7 +1,7 @@
 /**
- * Claude版V3専用の固定デモ（案件受信から人間責任者承認まで）の型定義。
+ * Claude版V3専用の固定デモ（5シナリオ）の型定義。
  * V1の`types/demo.ts`とは無関係の、V3専用の最小限の型。
- * 汎用ワークフローエンジンにはせず、今回の1シナリオを表現できる最小構成に留める。
+ * 汎用ワークフローエンジンにはせず、固定シナリオを表現できる最小構成に留める。
  */
 
 export type OfficeV3DemoStatus = "idle" | "running" | "awaiting-approval" | "completed";
@@ -27,25 +27,33 @@ export type OfficeV3DemoLog = {
   createdAt: number;
 };
 
-/** デモ内で使用する固定案件（モックデータ、実案件・個人情報は含まない）。 */
-export type OfficeV3DemoJob = {
+/** ラベル・値の1行（対象データの概要、承認時の指標などで共通利用する）。 */
+export type OfficeV3DemoMetric = {
+  label: string;
+  value: string;
+};
+
+export type OfficeV3DemoApprovalSummary = {
   title: string;
-  clientType: string;
-  requiredSkills: string;
-  workStyle: string;
-  rate: string;
-  urgency: string;
-  candidateCount: number;
-  finalCandidateCount: number;
-  matchingScore: number;
+  metrics: OfficeV3DemoMetric[];
+  qualityResult: string;
+  managerDecision: string;
+  strategistProposal?: string;
 };
 
 export type OfficeV3DemoScenario = {
   id: string;
   title: string;
-  job: OfficeV3DemoJob;
-  /** STEP1〜STEP12の通常進行フロー（STEP11で人間承認待ちに入り自動進行を止める）。 */
+  shortDescription: string;
+  category: string;
+  /** 対象データの見出し（例：「対象案件」「対象企業」「対象候補者」）。 */
+  subjectLabel: string;
+  subjectSummary: string;
+  /** 対象データの概要（モックデータのみ、実在情報は含まない）。 */
+  subjectDetails: OfficeV3DemoMetric[];
+  /** 通常進行フロー（最後から2番目のステップで人間承認待ちに入る）。 */
   steps: OfficeV3DemoStep[];
   /** 人間責任者が差し戻した場合だけ再生される簡易フロー。完了後は自動的に承認待ちへ戻る。 */
-  rejectionSteps: OfficeV3DemoStep[];
+  rejectionSteps?: OfficeV3DemoStep[];
+  approvalSummary: OfficeV3DemoApprovalSummary;
 };
