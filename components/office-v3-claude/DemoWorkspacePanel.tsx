@@ -56,6 +56,19 @@ export default function DemoWorkspacePanel({
   const recentLogs = logsExpanded ? [...logs].reverse() : logs.slice(-3).reverse();
   const activeAgentName = activeAgentId ? agentNames[activeAgentId] ?? activeAgentId : null;
 
+  // スクリーンリーダー向けの短い通知文。視覚表示（STEP番号・％・工程名・担当AI）とは別に、
+  // 工程が切り替わったときだけ変化する1〜2文だけをここで組み立てる（%やログ全体は含めない）。
+  const srAnnouncement =
+    demoStatus === "running"
+      ? approvalState === "rejected"
+        ? `差し戻し再処理中。${currentStep?.title ?? ""}。担当は${activeAgentName ?? ""}です。`
+        : `${currentStep?.title ?? ""}。担当は${activeAgentName ?? ""}です。`
+      : demoStatus === "awaiting-approval"
+        ? "AIの処理が完了しました。承認または差し戻しを選んでください。"
+        : demoStatus === "completed"
+          ? "デモが完了しました。"
+          : "";
+
   // シナリオ選択時に「主な担当」「所要時間」を一目で伝えるための派生表示。
   // データ構造は変えず、既存の steps / agentNames から都度計算するだけに留める。
   const primaryAgentNames = useMemo(() => {
@@ -85,8 +98,15 @@ export default function DemoWorkspacePanel({
 
   return (
     <aside className={s.demoWorkspace} aria-label="デモ操作パネル">
+      {/* 視覚上は非表示。工程が切り替わったときだけ短い文で通知し、％や全ログの
+          細かい変化までは読み上げさせない（過剰通知を避ける）。 */}
+      <div className={s.srOnly} aria-live="polite" aria-atomic="true">
+        {srAnnouncement}
+      </div>
+
       <div className={s.demoWorkspaceHeader}>
         <span className={s.demoPanelTag}>固定デモ・5シナリオ</span>
+        {demoStatus === "idle" ? <span className={s.demoStatusLabel}>状態：デモ開始前</span> : null}
         <label className={s.demoScenarioSelectWrap}>
           <span>デモシナリオ</span>
           <select
@@ -143,7 +163,7 @@ export default function DemoWorkspacePanel({
       </div>
 
       {demoStatus !== "idle" ? (
-        <div className={`${s.demoProgress} ${demoStatus === "running" ? s.demoProgressActive : ""}`} aria-live="polite">
+        <div className={`${s.demoProgress} ${demoStatus === "running" ? s.demoProgressActive : ""}`}>
           <div className={s.demoProgressHead}>
             <span>STEP {Math.min(currentStepIndex + 1, totalSteps)} / {totalSteps}</span>
             <span>{progressPercent}%</span>

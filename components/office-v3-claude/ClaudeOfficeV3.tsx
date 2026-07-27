@@ -126,6 +126,33 @@ export default function ClaudeOfficeV3() {
       </nav>
 
       <main className={s.stage}>
+        {/* DOM順・Tab順・読み上げ順で主要操作（シナリオ選択・デモ開始等）へ先に到達できるよう、
+            デモワークスペースをオフィス本体より前に配置する。PCの視覚順（左：オフィス／右：デモ）は
+            OfficeV3.module.css側のCSS order（.officeColumn/.demoSidebar）で維持している。 */}
+        <div className={s.demoSidebar}>
+          <DemoWorkspacePanel
+            scenarios={demo.scenarios}
+            selectedScenarioId={demo.selectedScenarioId}
+            selectedScenario={demo.selectedScenario}
+            selectScenario={demo.selectScenario}
+            demoStatus={demo.demoStatus}
+            approvalState={demo.approvalState}
+            approvalLocked={demo.approvalLocked}
+            currentStep={demo.currentStep}
+            currentStepIndex={demo.currentStepIndex}
+            totalSteps={demo.totalSteps}
+            progressPercent={demo.progressPercent}
+            activeAgentId={demo.activeAgentId}
+            activeStatusText={demo.activeStatusText}
+            agentNames={agentNames}
+            logs={demo.logs}
+            startDemo={demo.startDemo}
+            resetDemo={demo.resetDemo}
+            approve={demo.approve}
+            reject={demo.reject}
+          />
+        </div>
+
         <div className={s.officeColumn}>
           <div className={s.viewport}>
             <OfficeScene
@@ -156,30 +183,6 @@ export default function ClaudeOfficeV3() {
               onReject={demo.reject}
             />
           ) : null}
-        </div>
-
-        <div className={s.demoSidebar}>
-          <DemoWorkspacePanel
-            scenarios={demo.scenarios}
-            selectedScenarioId={demo.selectedScenarioId}
-            selectedScenario={demo.selectedScenario}
-            selectScenario={demo.selectScenario}
-            demoStatus={demo.demoStatus}
-            approvalState={demo.approvalState}
-            approvalLocked={demo.approvalLocked}
-            currentStep={demo.currentStep}
-            currentStepIndex={demo.currentStepIndex}
-            totalSteps={demo.totalSteps}
-            progressPercent={demo.progressPercent}
-            activeAgentId={demo.activeAgentId}
-            activeStatusText={demo.activeStatusText}
-            agentNames={agentNames}
-            logs={demo.logs}
-            startDemo={demo.startDemo}
-            resetDemo={demo.resetDemo}
-            approve={demo.approve}
-            reject={demo.reject}
-          />
         </div>
       </main>
 
