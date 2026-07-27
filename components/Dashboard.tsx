@@ -30,7 +30,7 @@ function Header({ onMenu }: { onMenu: () => void }) {
   return <header className="header"><div className="brand">
     <button className="mobile-menu icon-button" onClick={onMenu} aria-label="メニューを開く"><Menu size={20} /></button>
     <div className="brand-mark"><Sparkles size={21} /></div><div><strong>SES AI Office</strong><span>営業・採用業務をAIで加速</span></div>
-  </div><div className="header-actions"><Link className="office-return" href="/"><Building2 size={15} />AIオフィスへ戻る</Link><div className="now"><span>2026年7月16日 木曜日</span><strong>18:30</strong></div>
+  </div><div className="header-actions"><Link className="v3-link" href="/office-v3-claude"><Building2 size={15} />AI Office V3<b className="v3-tag">正式版</b></Link><Link className="office-return" href="/"><Building2 size={15} />AIオフィスへ戻る</Link><div className="now"><span>2026年7月16日 木曜日</span><strong>18:30</strong></div>
     <div className="live-pill"><span className="pulse" /> AI社員 8名 稼働中</div><button className="icon-button" aria-label="通知"><Bell size={19} /><i>3</i></button>
     <button className="icon-button hide-mobile" aria-label="設定"><Settings size={19} /></button><div className="user"><div className="avatar">さ</div><span>さとちゃん</span></div>
   </div></header>;
