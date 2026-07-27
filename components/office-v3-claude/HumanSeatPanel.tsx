@@ -83,7 +83,7 @@ export default function HumanSeatPanel({
       </header>
 
       <p className={s.detailRole}>
-        {seat.subLabel}。AI経営参謀・AI営業Mgr・AI品質管理からの重要提案／報告／警告を確認し、AIでは判断できない案件の最終判断・承認を行います。
+        AIでは確定できない重要判断を承認します。{seat.subLabel}として、AI経営参謀・AI営業Mgr・AI品質管理からの提案／報告／警告を確認します。
       </p>
 
       <div className={s.detailStatus}>

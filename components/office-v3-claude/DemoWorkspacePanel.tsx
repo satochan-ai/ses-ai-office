@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, CheckCircle2, ChevronDown, Gavel, Play, RotateCcw, ScrollText, ShieldAlert } from "lucide-react";
 import type {
   OfficeV3ApprovalState,
@@ -56,6 +56,33 @@ export default function DemoWorkspacePanel({
   const recentLogs = logsExpanded ? [...logs].reverse() : logs.slice(-3).reverse();
   const activeAgentName = activeAgentId ? agentNames[activeAgentId] ?? activeAgentId : null;
 
+  // シナリオ選択時に「主な担当」「所要時間」を一目で伝えるための派生表示。
+  // データ構造は変えず、既存の steps / agentNames から都度計算するだけに留める。
+  const primaryAgentNames = useMemo(() => {
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const step of selectedScenario.steps) {
+      if (step.requiresHumanApproval) continue;
+      const name = agentNames[step.agentId];
+      if (name && !seen.has(step.agentId)) {
+        seen.add(step.agentId);
+        names.push(name);
+        if (names.length >= 3) break;
+      }
+    }
+    return names;
+  }, [selectedScenario, agentNames]);
+
+  // 承認待ちに到達するまでの所要時間だけを合計する（承認後の完了ステップは含めない）。
+  const estimatedSeconds = useMemo(() => {
+    let ms = 0;
+    for (const step of selectedScenario.steps) {
+      if (step.requiresHumanApproval) break;
+      ms += step.durationMs;
+    }
+    return Math.round(ms / 1000);
+  }, [selectedScenario]);
+
   return (
     <aside className={s.demoWorkspace} aria-label="デモ操作パネル">
       <div className={s.demoWorkspaceHeader}>
@@ -75,7 +102,20 @@ export default function DemoWorkspacePanel({
         </label>
       </div>
 
-      {demoStatus === "idle" ? <p className={s.demoScenarioDesc}>{selectedScenario.shortDescription}</p> : null}
+      {/* 初見ユーザー向けのミニガイド。デモ開始前(idle)だけ表示し、進行中は場所を空ける。 */}
+      {demoStatus === "idle" ? (
+        <>
+          <ol className={s.demoQuickGuide}>
+            <li>シナリオを選ぶ</li>
+            <li>デモを開始する</li>
+            <li>人間責任者が承認する</li>
+          </ol>
+          <p className={s.demoOrgLegend}>実務処理 → 品質確認 → 経営判断 → 人間承認</p>
+          <p className={s.demoScenarioDesc}>{selectedScenario.shortDescription}</p>
+          <p className={s.demoScenarioMeta}>主な担当：{primaryAgentNames.join("、")}</p>
+          <p className={s.demoScenarioMeta}>所要時間：約{estimatedSeconds}秒＋承認操作</p>
+        </>
+      ) : null}
 
       <div className={s.demoWorkspaceActions}>
         {demoStatus === "idle" ? (
@@ -103,7 +143,7 @@ export default function DemoWorkspacePanel({
       </div>
 
       {demoStatus !== "idle" ? (
-        <div className={s.demoProgress} aria-live="polite">
+        <div className={`${s.demoProgress} ${demoStatus === "running" ? s.demoProgressActive : ""}`} aria-live="polite">
           <div className={s.demoProgressHead}>
             <span>STEP {Math.min(currentStepIndex + 1, totalSteps)} / {totalSteps}</span>
             <span>{progressPercent}%</span>
@@ -114,6 +154,8 @@ export default function DemoWorkspacePanel({
           <p className={s.demoProgressStep}>
             {approvalState === "rejected" && demoStatus === "running" ? (
               <span className={s.demoProgressRejectedTag}>差し戻し再処理中</span>
+            ) : demoStatus === "running" ? (
+              <span className={s.demoProgressLive}>現在処理中</span>
             ) : null}
             {currentStep?.title ?? ""}
           </p>
@@ -130,6 +172,9 @@ export default function DemoWorkspacePanel({
           スクロールしなくてもボタンへ到達しやすくする。 */}
       {demoStatus === "awaiting-approval" ? (
         <div className={s.demoApprovalCard}>
+          <p className={s.demoApprovalIntro}>
+            AIの処理が完了しました。内容を確認し、承認または差し戻しを選んでください。
+          </p>
           <h3>{selectedScenario.approvalSummary.title}</h3>
           <ul className={s.detailList}>
             <li><ShieldAlert size={12} aria-hidden="true" />AI品質管理：{selectedScenario.approvalSummary.qualityResult}</li>
@@ -182,11 +227,13 @@ export default function DemoWorkspacePanel({
       {demoStatus === "completed" ? (
         <div className={s.demoResultCard}>
           <h3><CheckCircle2 size={14} aria-hidden="true" />デモ完了</h3>
+          <p className={s.demoResultIntro}>
+            AIが分析・品質確認を行い、承認完了しました。
+          </p>
           <dl>
             {selectedScenario.approvalSummary.metrics.map(metric => (
               <div key={metric.label}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>
             ))}
-            <div><dt>品質確認</dt><dd>合格</dd></div>
             <div><dt>人間責任者</dt><dd>承認済み</dd></div>
           </dl>
         </div>

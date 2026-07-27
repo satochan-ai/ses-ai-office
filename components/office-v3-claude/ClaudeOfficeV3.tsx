@@ -99,7 +99,9 @@ export default function ClaudeOfficeV3() {
         </div>
         <div className={s.headerActions}>
           <p className={s.headline}>
-            ひとつのフロアで、13名のAI社員が中央指令席を囲んで働いています。
+            AI社員13名が営業・採用・フォローなどの業務を分担し、人間責任者が重要判断を行うSES業務デモです。
+            <br />
+            シナリオを選び、「デモ開始」を押してください。
           </p>
           <Link href="/dashboard" className={s.dashboardLink}>
             <LayoutDashboard size={13} aria-hidden="true" />
