@@ -255,26 +255,33 @@ export const v3Furniture: V3Furniture[] = [
 export const v3AgentPlacements: V3AgentPlacement[] = [
   {
     id: "p-manager", agentId: "manager", zoneId: "command",
-    gx: 15.2, gy: 15.4, facing: "se", scale: 1.12, labelPosition: "right", zIndex: 2,
+    // facing を統括モニター方向(nw)へ。座標・scale・役割・階層は不変。
+    gx: 15.2, gy: 15.4, facing: "nw", scale: 1.12, labelPosition: "right", zIndex: 2,
     deskPosition: { gx: 14.8, gy: 13.7 },
     equipment: ["大型指令デスク", "全体状況モニター", "案件・提案状況ボード", "SYNCテーブル"],
     currentStatus: "全体指揮中", shortRole: "営業Mgr",
     // 3層構造：経営・統括層（3名中の1名）。人間責任者席へ営業上の判断案を報告する。
     hierarchyLevel: "management", reportsTo: HUMAN_SEAT_ID,
     appearance: {
-      skin: "#e8b58f", hair: "#1f2733", hairStyle: "sidepart", outfit: "#2f4d72", outfitAlt: "#28374d",
+      // ネイビージャケット＋白シャツ＋チャコールスラックス。6.5頭身の社員フィギュア（立位・指示）。
+      skin: "#e8b58f", hair: "#1f2733", hairStyle: "sidepart", outfit: "#2f4d72", outfitAlt: "#3a3f47",
       build: "regular", stature: 1.06, glasses: false, headset: false, prop: "tablet", pose: "pointing",
+      workerPose: "standDirect", clothingType: "jacket", deskItems: ["tablet"],
     },
   },
   {
     id: "p-analytics", agentId: "analytics", zoneId: "insight",
-    gx: 3.8, gy: 13.2, facing: "se", scale: 1, labelPosition: "top",
+    // facing を主モニター方向(nw)へ。座標・scale・役割は不変。
+    gx: 3.8, gy: 13.2, facing: "nw", scale: 1, labelPosition: "top",
     deskPosition: { gx: 2.6, gy: 12.2 },
     equipment: ["3面モニター", "ファネルグラフ", "分析資料"],
     currentStatus: "モニター確認", shortRole: "分析",
     appearance: {
-      skin: "#f0c9a8", hair: "#3a2b26", hairStyle: "bob", outfit: "#4f8b7c", outfitAlt: "#37424f",
+      // スモーキーグリーンのニット＋グレーパンツ。着座でPC入力中の社員フィギュア。
+      skin: "#f0c9a8", hair: "#3a2b26", hairStyle: "bob", outfit: "#5f8d7a", outfitAlt: "#6f747d",
       build: "slim", stature: 0.97, glasses: true, headset: false, prop: "none", pose: "typing",
+      workerPose: "sitKeyboard", clothingType: "knit", deskItems: ["keyboard", "memoPad"],
+      deskAdjust: { dx: 5, dy: -3 },
     },
   },
   {
@@ -285,19 +292,24 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
     equipment: ["ホワイトボード", "ナレッジ棚", "書籍", "教材ファイル"],
     currentStatus: "教材を整理", shortRole: "ナレッジ",
     appearance: {
+      // オリーブのカーディガン。立位で開いた教材を確認（資料棚・ボード方向へ視線）。
       skin: "#d9a276", hair: "#6d4632", hairStyle: "bun", outfit: "#8f9a6a", outfitAlt: "#4a4237",
       build: "regular", stature: 1.0, glasses: true, headset: false, prop: "documents", pose: "reading",
+      workerPose: "standReview", clothingType: "cardigan", deskItems: ["openBook"], gazeTilt: -16,
     },
   },
   {
     id: "p-relation", agentId: "relation", zoneId: "client",
-    gx: 13.2, gy: 4.0, facing: "se", scale: 1, labelPosition: "top",
+    gx: 13.2, gy: 4.0, facing: "nw", scale: 1, labelPosition: "top",
     deskPosition: { gx: 12.0, gy: 3.0 },
     equipment: ["顧客履歴モニター", "顧客企業カード", "ヘッドセット"],
     currentStatus: "顧客履歴を確認", shortRole: "顧客管理",
     appearance: {
-      skin: "#e5b78f", hair: "#241f22", hairStyle: "ponytail", outfit: "#5c7fa6", outfitAlt: "#333c4a",
+      // ライトブルーのブラウス。着座で顧客履歴画面へ視線・両手入力。ヘッドセットは装着のみ（強い電話ポーズにしない）。
+      skin: "#e5b78f", hair: "#241f22", hairStyle: "ponytail", outfit: "#8aa1b8", outfitAlt: "#333c4a",
       build: "slim", stature: 0.99, glasses: false, headset: true, prop: "none", pose: "typing",
+      workerPose: "sitKeyboard", clothingType: "blouse", deskItems: ["keyboard", "smartphone"],
+      deskAdjust: { dx: 5, dy: -3 },
     },
   },
   {
@@ -308,19 +320,23 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
     equipment: ["請求管理端末", "契約書棚", "更新期限ボード", "書類キャビネット"],
     currentStatus: "契約書を確認", shortRole: "契約管理",
     appearance: {
-      skin: "#f1cbab", hair: "#4d3b32", hairStyle: "crop", outfit: "#8a6f52", outfitAlt: "#3d3a36",
+      // ベージュのニットベスト＋白シャツ＋濃色スラックス。着座で契約書へ視線・ペンで行を追う。
+      skin: "#f1cbab", hair: "#4d3b32", hairStyle: "crop", outfit: "#c3ac86", outfitAlt: "#33363d",
       build: "broad", stature: 1.03, glasses: true, headset: false, prop: "folder", pose: "reviewing",
+      workerPose: "sitDesk", clothingType: "knitVest", squareGlasses: true, deskItems: ["papers"],
     },
   },
   {
     id: "p-newbiz", agentId: "newbiz", zoneId: "growth",
-    gx: 13.4, gy: 22.6, facing: "se", scale: 1, labelPosition: "top",
+    gx: 13.4, gy: 22.6, facing: "nw", scale: 1, labelPosition: "top",
     deskPosition: { gx: 12.2, gy: 21.7 },
     equipment: ["電話席", "ヘッドセット", "メール端末", "企業リスト"],
     currentStatus: "架電中", shortRole: "新規開拓",
     appearance: {
+      // テラコッタのポロ。着座・ヘッドセット通話、片手はキーボード（企業リスト画面）。
       skin: "#e3ab84", hair: "#33251f", hairStyle: "wavy", outfit: "#b06a62", outfitAlt: "#3a3540",
       build: "regular", stature: 1.0, glasses: false, headset: true, prop: "none", pose: "phone",
+      workerPose: "sitCall", clothingType: "polo", deskItems: ["keyboard"],
     },
   },
   {
@@ -330,20 +346,24 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
     equipment: ["BPネットワーク図", "名刺ホルダー", "商流メモ"],
     currentStatus: "商流を整理", shortRole: "BP開拓",
     appearance: {
+      // モーヴのシャツ。着座で商流メモと名刺情報を見比べる（名刺は観客へ掲げない）。
       skin: "#c98f6b", hair: "#1c2028", hairStyle: "braid", outfit: "#8d6489", outfitAlt: "#39323d",
       build: "slim", stature: 0.96, glasses: false, headset: false, prop: "businessCard", pose: "standing",
+      workerPose: "sitDesk", clothingType: "shirt", deskItems: ["papers", "businessCards"],
     },
   },
   {
     id: "p-matching", agentId: "matching", zoneId: "talent",
     // "bottom"に変更：北西の契約管理担当とラベルが近接するため（改善1）
-    gx: 22.6, gy: 12.9, facing: "se", scale: 1, labelPosition: "bottom",
+    gx: 22.6, gy: 12.9, facing: "nw", scale: 1, labelPosition: "bottom",
     deskPosition: { gx: 21.8, gy: 12.3 },
     equipment: ["案件×要員比較モニター", "候補者カード", "推薦文タブレット"],
     currentStatus: "案件と要員を照合", shortRole: "マッチング",
     appearance: {
-      skin: "#efc19d", hair: "#54382c", hairStyle: "undercut", outfit: "#6f5c9e", outfitAlt: "#343044",
+      // パープルのカーディガン。着座でスキルシートを片手で押さえ、もう一方で画面操作。
+      skin: "#efc19d", hair: "#54382c", hairStyle: "undercut", outfit: "#7d6ba6", outfitAlt: "#343044",
       build: "regular", stature: 1.02, glasses: false, headset: false, prop: "tablet", pose: "reviewing",
+      workerPose: "sitDesk", clothingType: "cardigan", deskItems: ["papers", "memoPad"],
     },
   },
   {
@@ -353,30 +373,36 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
     equipment: ["履歴書", "候補者カード", "面談席"],
     currentStatus: "候補者を確認", shortRole: "採用",
     appearance: {
-      skin: "#f4cba6", hair: "#8b5b3a", hairStyle: "long", outfit: "#c08a4c", outfitAlt: "#4a3f34",
+      // ブラウス＋ロングスカート。着座で履歴書を机上確認、候補者情報モニターへ視線。
+      skin: "#f4cba6", hair: "#8b5b3a", hairStyle: "long", outfit: "#c9954f", outfitAlt: "#4a3f34",
       build: "slim", stature: 0.98, glasses: false, headset: false, prop: "resume", pose: "reading",
+      workerPose: "sitDesk", clothingType: "longSkirt", deskItems: ["papers", "fileStack"],
     },
   },
   {
     id: "p-follow", agentId: "follow", zoneId: "talent",
-    gx: 24.2, gy: 17.8, facing: "se", scale: 1, labelPosition: "bottom",
+    gx: 24.2, gy: 17.8, facing: "nw", scale: 1, labelPosition: "bottom",
     deskPosition: { gx: 24.8, gy: 16.4 },
     equipment: ["相談ソファ", "週報・契約更新端末", "面談席"],
     currentStatus: "面談中", shortRole: "フォロー",
     appearance: {
-      skin: "#dba47f", hair: "#26242a", hairStyle: "curly", outfit: "#4d8a80", outfitAlt: "#33413f",
+      // ティールのニット。着座・ヘッドセットで相談、机上にノート。
+      skin: "#dba47f", hair: "#26242a", hairStyle: "curly", outfit: "#4f8f83", outfitAlt: "#33413f",
       build: "broad", stature: 1.04, glasses: false, headset: true, prop: "notebook", pose: "standing",
+      workerPose: "sitCall", clothingType: "knit", deskItems: ["notebook"],
     },
   },
   {
     id: "p-proposal", agentId: "proposal", zoneId: "proposal",
-    gx: 24.4, gy: 24.2, facing: "se", scale: 1.04, labelPosition: "right",
+    gx: 24.4, gy: 24.2, facing: "nw", scale: 1.04, labelPosition: "right",
     deskPosition: { gx: 23.2, gy: 23.2 },
     equipment: ["推薦文モニター", "面談対策ボード", "企業分析資料", "小会議席"],
     currentStatus: "推薦文を作成", shortRole: "面談支援",
     appearance: {
+      // グリーンのシャツ。着座で推薦文入力、横に面談資料と水筒（画面と資料を交互に見る）。
       skin: "#e9bb95", hair: "#5c4438", hairStyle: "tiedback", outfit: "#5f8a70", outfitAlt: "#3c4442",
       build: "regular", stature: 1.0, glasses: true, headset: false, prop: "marker", pose: "presenting",
+      workerPose: "sitKeyboard", clothingType: "shirt", deskItems: ["keyboard", "papers", "waterBottle"],
     },
   },
 ];
@@ -397,8 +423,12 @@ export const v3CentralTeamPlacements: V3AgentPlacement[] = [
     // 3層構造：経営・統括層（3名中の1名）。重大な問題は人間責任者席へ直接報告する。
     hierarchyLevel: "management", reportsTo: HUMAN_SEAT_ID,
     appearance: {
+      // グレージャケット（少しフォーマル）。立位でチェックリストとペンを持ち、下を向いて確認。
       skin: "#e2b48d", hair: "#4a4a4a", hairStyle: "bob", outfit: "#5c6b78", outfitAlt: "#33383d",
       build: "regular", stature: 0.98, glasses: true, headset: false, prop: "documents", pose: "reviewing",
+      workerPose: "standReview", clothingType: "jacket", squareGlasses: true, deskItems: ["clipboard"], gazeTilt: -17,
+      // 座標は不変。壁面モニターと重ならないよう手前(SE)へ内部オフセット＋わずかに内部縮小。
+      figureNudge: { x: 7, y: 8, scale: 0.95 },
     },
   },
   {
@@ -410,8 +440,10 @@ export const v3CentralTeamPlacements: V3AgentPlacement[] = [
     // 3層構造：経営・統括層（3名中の1名）。重要課題を人間責任者席へ提案する。
     hierarchyLevel: "management", reportsTo: HUMAN_SEAT_ID,
     appearance: {
+      // チャコールジャケット＋薄手ニット（少しフォーマル）。立位でタブレットを両手で支え統合情報を確認。営業Mgrより控えめ。
       skin: "#eab68f", hair: "#3d3630", hairStyle: "long", outfit: "#454f5e", outfitAlt: "#2c323b",
       build: "regular", stature: 1.0, glasses: false, headset: false, prop: "tablet", pose: "reading",
+      workerPose: "standReview", clothingType: "jacket", deskItems: ["tablet"], gazeTilt: -13,
     },
   },
 ];

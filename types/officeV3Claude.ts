@@ -95,6 +95,38 @@ export type V3Prop =
 
 export type V3Pose = "typing" | "standing" | "pointing" | "reading" | "phone" | "presenting" | "reviewing";
 
+/* --- 以下は V3 Claude版の「社員らしい人物表現」(WorkerFigure) 専用。--- */
+/* 共通の OfficeAgent 型には一切追加しない。data/officeV3ClaudeLayout.ts でのみ使う。 */
+
+/** 立位2種＋座位3種。姿勢そのものが「何をしているか」を伝える。 */
+export type V3WorkerPose = "standDirect" | "standReview" | "sitKeyboard" | "sitDesk" | "sitCall";
+
+/** 色ではなく輪郭で見分ける衣服。 */
+export type V3ClothingType =
+  | "jacket"
+  | "shirt"
+  | "knit"
+  | "cardigan"
+  | "blouse"
+  | "polo"
+  | "knitVest"
+  | "longSkirt";
+
+/** 手・机上に置く小物（各人2点以内）。必ず手／机／膝のいずれかへ接触させる。 */
+export type V3DeskItem =
+  | "keyboard"
+  | "mouse"
+  | "memoPad"
+  | "papers"
+  | "fileStack"
+  | "businessCards"
+  | "notebook"
+  | "waterBottle"
+  | "smartphone"
+  | "tablet"
+  | "openBook"
+  | "clipboard";
+
 export type V3Appearance = {
   skin: string;
   hair: string;
@@ -103,12 +135,27 @@ export type V3Appearance = {
   outfit: string;
   outfitAlt: string;
   build: "slim" | "regular" | "broad";
-  /** 頭身の微調整倍率（0.94–1.06 程度）。 */
+  /** 頭身の微調整倍率（0.94–1.06 程度）。旧表現専用。WorkerFigure では未使用。 */
   stature: number;
   glasses: boolean;
   headset: boolean;
   prop: V3Prop;
   pose: V3Pose;
+  /* --- V3 Claude版 WorkerFigure 用（任意）。未指定なら旧表現へフォールバック。 --- */
+  /** 骨格・着座・視線・家具接触を切り替える姿勢タイプ。 */
+  workerPose?: V3WorkerPose;
+  /** 衣服の輪郭タイプ。未指定は "knit" 相当。 */
+  clothingType?: V3ClothingType;
+  /** 伏し目の強さ(度)。未指定は姿勢ごとの既定値。 */
+  gazeTilt?: number;
+  /** 眼鏡を角型にする（既定は丸型）。 */
+  squareGlasses?: boolean;
+  /** 座位 occluder(机エッジ)の描画オフセット。席の向き・机位置に合わせて微調整する。 */
+  deskAdjust?: { dx?: number; dy?: number };
+  /** フィギュア全体の内部オフセット/内部scale。家具との重なり回避に使う（gx/gy は不変）。 */
+  figureNudge?: { x?: number; y?: number; scale?: number };
+  /** 手・机上の小物（先頭が主役、2点以内目安）。 */
+  deskItems?: V3DeskItem[];
 };
 
 /**
