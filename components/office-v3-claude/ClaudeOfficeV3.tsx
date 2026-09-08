@@ -6,17 +6,34 @@ import { Building2, LayoutDashboard, MousePointerClick, Sparkles } from "lucide-
 import { officeAgents } from "@/data/office";
 import { v3ClaudeOnlyAgents } from "@/data/officeV3ClaudeAgents";
 import { HUMAN_SEAT_ID, v3AgentPlacements, v3CentralTeamPlacements, v3Areas, v3HumanSeat, v3Zones } from "@/data/officeV3ClaudeLayout";
+import { v3Layout1f } from "@/data/officeV3ClaudeLayout.1f";
+import { v3Layout2f } from "@/data/officeV3ClaudeLayout.2f";
+import { v3Layout3f } from "@/data/officeV3ClaudeLayout.3f";
+import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
-import type { V3AgentView, V3AreaId } from "@/types/officeV3Claude";
+import type { V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
 import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import s from "./OfficeV3.module.css";
 
+/**
+ * 組織フロアの切替タブ（上位概念）。"all" と v3Floors(order順) から生成する。
+ * Step4: 1F/2F/3F はフロア別レイアウト（V3FloorLayout）を選択。2F/3F の個別デザインは後工程。
+ */
+const FLOOR_TABS: { id: V3FloorView; label: string; sub: string }[] = [
+  { id: "all", label: "全体", sub: "全フロア" },
+  ...[...v3Floors]
+    .sort((a, b) => a.order - b.order)
+    .map(floor => ({ id: floor.id, label: floor.id.toUpperCase(), sub: floor.name.replace(/フロア$/u, "") })),
+];
+
 export default function ClaudeOfficeV3() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [area, setArea] = useState<V3AreaId>("all");
+  // floor（組織上の階）と area（1枚の物理フロア内のズーム）は完全に別state。統合しない。
+  const [floorView, setFloorView] = useState<V3FloorView>("all");
   const [compact, setCompact] = useState(false);
   const demo = useOfficeV3ClaudeDemo();
 
@@ -82,6 +99,39 @@ export default function ClaudeOfficeV3() {
   const close = useCallback(() => setSelectedId(null), []);
   const select = useCallback((agentId: string) => setSelectedId(current => (current === agentId ? null : agentId)), []);
 
+  // --- Step4: フロア別レイアウトデータの選択。
+  //   1f/2f/3f はそれぞれ独立した V3FloorLayout（現状は 2F/3F=現行複製ベース）。
+  //   all は互換表示。全体スタック図は後工程。 ---
+  const floorLayout =
+    floorView === "1f" ? v3Layout1f
+    : floorView === "2f" ? v3Layout2f
+    : floorView === "3f" ? v3Layout3f
+    : null;
+
+  // 人物ビューは選択中フロアの placements に一致するものだけへ絞る（家具・座標・夜景は不変）。
+  const floorViews = useMemo(() => {
+    if (!floorLayout) return views;
+    const ids = new Set(floorLayout.placements.map(placement => placement.agentId));
+    return views.filter(view => ids.has(view.placement.agentId));
+  }, [views, floorLayout]);
+  const aiCount = floorViews.length;
+  // 人間責任者席は AI社員とは別カテゴリ。表示は "all" と "3f"（human seat は 3F 相当）のときだけ。
+  const showHumanSeat = floorView === "all" || floorView === "3f";
+  const activeFloor = floorView === "all" ? null : v3Floors.find(floor => floor.id === floorView) ?? null;
+  // デモ進行中はフロア切替を止める（全13名前提のため）。切替時は area を初期値へ、選択も解除。
+  const demoBusy = demo.demoStatus === "running" || demo.demoStatus === "awaiting-approval";
+  const changeFloor = useCallback((next: V3FloorView) => {
+    setFloorView(next);
+    setArea("all");
+    setSelectedId(null);
+  }, []);
+  // デモは既存5シナリオが全13名前提のため、開始時は floorView を "all" へ戻す（デモ本体は変更しない）。
+  const handleStartDemo = useCallback(() => {
+    setFloorView("all");
+    setSelectedId(null);
+    demo.startDemo();
+  }, [demo]);
+
   // 人間責任者席の詳細パネル用に、経営・統括層3名の最新ビューを渡す（AI社員の詳細パネルとは別コンポーネント）。
   const managerView = views.find(view => view.placement.agentId === "manager");
   const qualityView = views.find(view => view.placement.agentId === "quality");
@@ -99,7 +149,7 @@ export default function ClaudeOfficeV3() {
         </div>
         <div className={s.headerActions}>
           <p className={s.headline}>
-            AI社員13名が営業・採用・フォローなどの業務を分担し、人間責任者が重要判断を行うSES業務デモです。
+            AI社員が営業・採用・フォローなどの業務を分担し、人間責任者が重要判断を行うSES業務デモです。
             <br />
             シナリオを選び、「デモ開始」を押してください。
           </p>
@@ -110,6 +160,36 @@ export default function ClaudeOfficeV3() {
         </div>
       </header>
 
+      {/* 組織フロアの切り替え（上位概念）。下の「表示エリア」とは別state・別概念。 */}
+      <nav className={s.floorBar} aria-label="組織フロアの切り替え">
+        {FLOOR_TABS.map(tab => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => changeFloor(tab.id)}
+            disabled={demoBusy}
+            className={floorView === tab.id ? s.floorActive : undefined}
+            aria-pressed={floorView === tab.id}
+          >
+            <b>{tab.label}</b>
+            <small>{tab.sub}</small>
+          </button>
+        ))}
+      </nav>
+      <p className={s.floorMeta}>
+        {activeFloor ? (
+          <>
+            <b>{activeFloor.caption}</b>　{activeFloor.name}　／　AI社員 {aiCount}名
+            {floorView === "3f" ? "　＋　人間責任者" : ""}
+          </>
+        ) : (
+          <>
+            <b>SES AI OFFICE</b>　／　AI社員 {aiCount}名
+          </>
+        )}
+      </p>
+
+      {/* 表示エリアの切り替え（下位概念：1枚の物理フロア内をズーム）。 */}
       <nav className={s.areaBar} aria-label="表示エリアの切り替え">
         {v3Areas.map(item => (
           <button
@@ -119,7 +199,7 @@ export default function ClaudeOfficeV3() {
             className={area === item.id ? s.areaActive : undefined}
             aria-pressed={area === item.id}
           >
-            <b>{item.label}</b>
+            <b>{item.id === "all" ? "全景" : item.label}</b>
             <small>{item.caption}</small>
           </button>
         ))}
@@ -146,7 +226,7 @@ export default function ClaudeOfficeV3() {
             activeStatusText={demo.activeStatusText}
             agentNames={agentNames}
             logs={demo.logs}
-            startDemo={demo.startDemo}
+            startDemo={handleStartDemo}
             resetDemo={demo.resetDemo}
             approve={demo.approve}
             reject={demo.reject}
@@ -156,13 +236,20 @@ export default function ClaudeOfficeV3() {
         <div className={s.officeColumn}>
           <div className={s.viewport}>
             <OfficeScene
-              views={views}
+              views={floorViews}
               selectedId={selectedId}
               area={area}
               compact={compact}
               onSelect={select}
               activeAgentId={demo.activeAgentId}
               activeStatusText={demo.activeStatusText}
+              showHumanSeat={showHumanSeat}
+              /* Step4: 1f/2f/3f はフロア別レイアウトを渡す。all は未指定＝OfficeScene 側の
+                 base（現行）レイアウトが使われる（互換表示）。 */
+              zones={floorLayout?.zones}
+              corridors={floorLayout?.corridors}
+              furniture={floorLayout?.furniture}
+              viewBox={floorLayout?.viewBox}
             />
           </div>
           {selected ? (

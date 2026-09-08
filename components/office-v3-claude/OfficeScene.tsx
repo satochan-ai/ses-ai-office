@@ -114,10 +114,10 @@ function Walls() {
   );
 }
 
-function Corridors() {
+function Corridors({ corridors }: { corridors: typeof v3Corridors }) {
   return (
     <g aria-hidden="true">
-      {v3Corridors.map(corridor => (
+      {corridors.map(corridor => (
         <g key={corridor.id}>
           <polygon points={rectPolygon(corridor.bounds)} fill={corridor.kind === "main" ? "#d9dde0" : "#dfe2e4"} />
           <polygon points={rectPolygon(corridor.bounds)} fill="none" stroke="#c2c8cc" strokeWidth={1.6} />
@@ -137,18 +137,28 @@ type Props = {
   /** デモ進行中に現在処理中のagentId（またはHUMAN_SEAT_ID）。selectedIdとは独立して扱う。 */
   activeAgentId?: string | null;
   activeStatusText?: string;
+  /** 人間責任者席を描くか。フロア表示が "all" / "3f" のときだけ true（Step3）。既定は表示。 */
+  showHumanSeat?: boolean;
+  /** Step4: フロア別レイアウトデータ。未指定なら現行の base レイアウト（＝all 互換）を使う。 */
+  zones?: typeof v3Zones;
+  corridors?: typeof v3Corridors;
+  furniture?: typeof v3Furniture;
+  viewBox?: { x: number; y: number; w: number; h: number };
 };
 
-export default function OfficeScene({ views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText }: Props) {
+export default function OfficeScene({
+  views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText, showHumanSeat = true,
+  zones = v3Zones, corridors = v3Corridors, furniture = v3Furniture, viewBox = VIEWBOX,
+}: Props) {
   const focus = v3Areas.find(a => a.id === area) ?? v3Areas[0];
   const scale = compact && area === "all" ? focus.scale * 0.72 : focus.scale;
-  const viewCx = VIEWBOX.x + VIEWBOX.w / 2;
-  const viewCy = VIEWBOX.y + VIEWBOX.h / 2;
+  const viewCx = viewBox.x + viewBox.w / 2;
+  const viewCy = viewBox.y + viewBox.h / 2;
   const camera = `translate(${viewCx - scale * focus.cx}px, ${viewCy - scale * focus.cy}px) scale(${scale})`;
 
   const props = useMemo(() => {
     const items = [
-      ...v3Furniture.map(item => ({ key: item.id, depth: isoDepth(item.gx, item.gy), z: item.zIndex ?? 0, node: <OfficeFurniture item={item} /> })),
+      ...furniture.map(item => ({ key: item.id, depth: isoDepth(item.gx, item.gy), z: item.zIndex ?? 0, node: <OfficeFurniture item={item} /> })),
       ...views.map(view => ({
         key: view.placement.id,
         depth: isoDepth(view.placement.gx, view.placement.gy),
@@ -164,25 +174,27 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
           />
         ),
       })),
-      {
-        key: v3HumanSeat.id,
-        depth: isoDepth(v3HumanSeat.gx, v3HumanSeat.gy),
-        z: 1,
-        node: (
-          <HumanSeat
-            seat={v3HumanSeat}
-            selected={selectedId === v3HumanSeat.id}
-            dimmed={selectedId !== null && selectedId !== v3HumanSeat.id}
-            onSelect={onSelect}
-            isDemoActive={activeAgentId === v3HumanSeat.id}
-          />
-        ),
-      },
+      ...(showHumanSeat
+        ? [{
+            key: v3HumanSeat.id,
+            depth: isoDepth(v3HumanSeat.gx, v3HumanSeat.gy),
+            z: 1,
+            node: (
+              <HumanSeat
+                seat={v3HumanSeat}
+                selected={selectedId === v3HumanSeat.id}
+                dimmed={selectedId !== null && selectedId !== v3HumanSeat.id}
+                onSelect={onSelect}
+                isDemoActive={activeAgentId === v3HumanSeat.id}
+              />
+            ),
+          }]
+        : []),
     ];
     return items.sort((a, b) => a.depth - b.depth || a.z - b.z);
-  }, [onSelect, selectedId, views, activeAgentId, activeStatusText]);
+  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture]);
 
-  const activeZones = new Set(v3Zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
+  const activeZones = new Set(zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
 
   // 3層構造の報告関係を、選択時だけ淡い線でつなぐ（常時は表示しない）。
   const connectorLines = useMemo(() => {
@@ -220,10 +232,10 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
   return (
     <svg
       className={s.svg}
-      viewBox={`${VIEWBOX.x} ${VIEWBOX.y} ${VIEWBOX.w} ${VIEWBOX.h}`}
+      viewBox={`${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`}
       preserveAspectRatio="xMidYMid slice"
       role="group"
-      aria-label="アイソメトリック表示のSES AI Office。AI社員13名が中央指令席を囲んで働き、その奥に人間責任者席があります。"
+      aria-label={`アイソメトリック表示のSES AI Office。AI社員${views.length}名が表示されています。${showHumanSeat ? "人間責任者席があります。" : ""}`}
     >
       <defs>
         <linearGradient id="v3Dusk" x1="0" y1="0" x2="0" y2="1">
@@ -249,8 +261,8 @@ export default function OfficeScene({ views, selectedId, area, compact, onSelect
         />
         <polygon points={rectPolygon({ gx0: 0, gy0: 0, gx1: G, gy1: G })} fill="#cdd3d8" />
 
-        <Corridors />
-        {v3Zones.map(zone => (
+        <Corridors corridors={corridors} />
+        {zones.map(zone => (
           <OfficeZone key={zone.id} zone={zone} faded={!activeZones.has(zone.id)} />
         ))}
 

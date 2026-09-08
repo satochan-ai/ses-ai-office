@@ -28,6 +28,13 @@ export type V3Zone = {
 
 export type V3AreaId = "all" | "north" | "center" | "south";
 
+/**
+ * 組織上の「階」の表示切り替え（Step3で導入）。
+ * "all" = 13名全員 ／ "1f"|"2f"|"3f" = その階の所属AIのみ。
+ * 既存の V3AreaId（1枚の物理フロア内をズームする下位概念）とは別の state で管理する。
+ */
+export type V3FloorView = "all" | V3FloorId;
+
 export type V3Corridor = {
   id: string;
   kind: "main" | "branch";
@@ -242,4 +249,21 @@ export type V3ClaudeOnlyAgentProfile = {
   history: string[];
   /** 「最終成果物」に表示する配列。 */
   finalDeliverables: string[];
+};
+
+/**
+ * Step4: フロア別の物理レイアウトデータの集約型（V3 Claude専用の単純な集約型）。
+ * 現在は 1F=現行フロアそのまま、2F/3F=現行レイアウトの複製ベース（仮）。
+ * 2F/3F 専用の家具・ゾーン設計、本格3F移設は後工程。既存型は作り直さない。
+ */
+export type V3FloorLayout = {
+  floorId: V3FloorId;
+  zones: V3Zone[];
+  corridors: V3Corridor[];
+  furniture: V3Furniture[];
+  placements: V3AgentPlacement[];
+  /** 3F のみ「3F相当」として人間責任者席を参照で保持する（V3HumanSeat 型・データは不変）。 */
+  humanSeat?: V3HumanSeat;
+  /** 将来フロア別に VIEWBOX を持てる構造。今回は3フロアとも現行 VIEWBOX を共有する。 */
+  viewBox: { x: number; y: number; w: number; h: number };
 };
