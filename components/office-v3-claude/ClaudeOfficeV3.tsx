@@ -11,7 +11,7 @@ import { v3Layout2f } from "@/data/officeV3ClaudeLayout.2f";
 import { v3Layout3f } from "@/data/officeV3ClaudeLayout.3f";
 import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
-import type { V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
+import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
 import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
@@ -108,11 +108,34 @@ export default function ClaudeOfficeV3() {
     : floorView === "3f" ? v3Layout3f
     : null;
 
-  // 人物ビューは選択中フロアの placements に一致するものだけへ絞る（家具・座標・夜景は不変）。
+  // フロア表示では base の人物プロフィールを保ったまま、その階専用の配置だけを上書きする。
+  // all は従来どおり base views をそのまま使う。
   const floorViews = useMemo(() => {
     if (!floorLayout) return views;
-    const ids = new Set(floorLayout.placements.map(placement => placement.agentId));
-    return views.filter(view => ids.has(view.placement.agentId));
+    const baseViews = new Map(views.map(view => [view.placement.agentId, view]));
+
+    return floorLayout.placements.flatMap(floorPlacement => {
+      const baseView = baseViews.get(floorPlacement.agentId);
+      if (!baseView) return [];
+
+      // optional な配置値は undefined で base 側を消さない。
+      const definedPlacement = Object.fromEntries(
+        Object.entries(floorPlacement).filter(([, value]) => value !== undefined),
+      );
+      const definedAppearance = Object.fromEntries(
+        Object.entries(floorPlacement.appearance).filter(([, value]) => value !== undefined),
+      );
+      const placement: V3AgentPlacement = {
+        ...baseView.placement,
+        ...definedPlacement,
+        appearance: {
+          ...baseView.placement.appearance,
+          ...definedAppearance,
+        },
+      } as V3AgentPlacement;
+
+      return [{ ...baseView, placement }];
+    });
   }, [views, floorLayout]);
   const aiCount = floorViews.length;
   // 人間責任者席は AI社員とは別カテゴリ。表示は "all" と "3f"（human seat は 3F 相当）のときだけ。
