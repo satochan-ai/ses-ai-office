@@ -231,7 +231,7 @@ function Terminal() {
   );
 }
 
-function Whiteboard({ w, variant }: { w: number; variant?: "strategyBoard" }) {
+function Whiteboard({ w, variant }: { w: number; variant?: "strategyBoard" | "qualityBoard" }) {
   const dx = w * HW;
   const dy = w * HH;
   return (
@@ -251,6 +251,15 @@ function Whiteboard({ w, variant }: { w: number; variant?: "strategyBoard" }) {
           <text x={0} y={-60}>RISK / OPP</text>
           <text x={0} y={-48}>NEXT WEEK</text>
           <text x={0} y={-36}>WHAT-IF</text>
+        </g>
+      ) : null}
+      {variant === "qualityBoard" ? (
+        <g className={s.deviceLabel} textAnchor="middle" style={{ fontSize: 4, letterSpacing: 0 }}>
+          <text x={0} y={-84}>QUALITY</text>
+          <text x={0} y={-72}>PASS</text>
+          <text x={0} y={-60}>REVIEW</text>
+          <text x={0} y={-48}>RETURN</text>
+          <text x={0} y={-36}>SCORE</text>
         </g>
       ) : null}
     </g>
@@ -328,7 +337,7 @@ export default function OfficeFurniture({ item }: { item: V3Furniture }) {
     case "monitorBank": shape = <MonitorBank w={item.width} accent={item.accent ?? "#6f9fc0"} />; break;
     // 設備名の常時表示は削減し、家具の形そのもので存在感を伝える（ラベルは<title>ツールチップに残す）
     case "wallScreen": shape = <ScreenPanel w={item.width / 2} h={54} lift={38} accent={item.accent ?? "#6f9fc0"} />; break;
-    case "whiteboard": shape = <Whiteboard w={item.width / 2} variant={item.variant === "strategyBoard" ? "strategyBoard" : undefined} />; break;
+    case "whiteboard": shape = <Whiteboard w={item.width / 2} variant={item.variant === "strategyBoard" || item.variant === "qualityBoard" ? item.variant : undefined} />; break;
     case "shelf": shape = <Shelf w={item.width} facing={item.facing} />; break;
     case "cabinet": shape = <Cabinet w={item.width} />; break;
     case "sofa": shape = <Sofa w={item.width} facing={item.facing} />; break;

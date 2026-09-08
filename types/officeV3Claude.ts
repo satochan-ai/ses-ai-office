@@ -77,7 +77,7 @@ export type V3Furniture = {
   label?: string;
   accent?: string;
   /** 特定家具だけに適用する描画variant。未指定は既存見た目を維持する。 */
-  variant?: "darkConsole" | "strategyBoard";
+  variant?: "darkConsole" | "strategyBoard" | "qualityBoard";
 };
 
 export type V3Facing = "ne" | "nw" | "se" | "sw";
