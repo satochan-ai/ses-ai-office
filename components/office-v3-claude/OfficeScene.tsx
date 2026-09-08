@@ -17,7 +17,7 @@ import {
   v3HumanSeat,
   v3Zones,
 } from "@/data/officeV3ClaudeLayout";
-import type { V3AgentView, V3AreaId } from "@/types/officeV3Claude";
+import type { V3AgentView, V3Area, V3AreaId, V3HumanSeat } from "@/types/officeV3Claude";
 import HumanSeat from "./HumanSeat";
 import OfficeAgent from "./OfficeAgent";
 import OfficeFurniture from "./OfficeFurniture";
@@ -144,13 +144,20 @@ type Props = {
   corridors?: typeof v3Corridors;
   furniture?: typeof v3Furniture;
   viewBox?: { x: number; y: number; w: number; h: number };
+  /** Step6: フロア別の人間責任者席（未指定なら base の v3HumanSeat）。 */
+  humanSeat?: V3HumanSeat;
+  /** Step6: フロア別カメラ（未指定なら base の v3Areas）。 */
+  areas?: readonly V3Area[];
+  /** Step6: 床全面へ重ねる濃色ティント（3F のダーク化。未指定なら重ねない）。 */
+  floorTint?: string;
 };
 
 export default function OfficeScene({
   views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText, showHumanSeat = true,
   zones = v3Zones, corridors = v3Corridors, furniture = v3Furniture, viewBox = VIEWBOX,
+  humanSeat = v3HumanSeat, areas, floorTint,
 }: Props) {
-  const focus = v3Areas.find(a => a.id === area) ?? v3Areas[0];
+  const focus = (areas ?? v3Areas).find(a => a.id === area) ?? (areas ?? v3Areas)[0];
   const scale = compact && area === "all" ? focus.scale * 0.72 : focus.scale;
   const viewCx = viewBox.x + viewBox.w / 2;
   const viewCy = viewBox.y + viewBox.h / 2;
@@ -176,23 +183,23 @@ export default function OfficeScene({
       })),
       ...(showHumanSeat
         ? [{
-            key: v3HumanSeat.id,
-            depth: isoDepth(v3HumanSeat.gx, v3HumanSeat.gy),
+            key: humanSeat.id,
+            depth: isoDepth(humanSeat.gx, humanSeat.gy),
             z: 1,
             node: (
               <HumanSeat
-                seat={v3HumanSeat}
-                selected={selectedId === v3HumanSeat.id}
-                dimmed={selectedId !== null && selectedId !== v3HumanSeat.id}
+                seat={humanSeat}
+                selected={selectedId === humanSeat.id}
+                dimmed={selectedId !== null && selectedId !== humanSeat.id}
                 onSelect={onSelect}
-                isDemoActive={activeAgentId === v3HumanSeat.id}
+                isDemoActive={activeAgentId === humanSeat.id}
               />
             ),
           }]
         : []),
     ];
     return items.sort((a, b) => a.depth - b.depth || a.z - b.z);
-  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture]);
+  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture, humanSeat]);
 
   const activeZones = new Set(zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
 
@@ -202,7 +209,7 @@ export default function OfficeScene({
     const byAgentId = new Map(views.map(view => [view.placement.agentId, view.placement]));
     const pointOf = (id: string) =>
       id === HUMAN_SEAT_ID
-        ? { gx: v3HumanSeat.gx, gy: v3HumanSeat.gy }
+        ? { gx: humanSeat.gx, gy: humanSeat.gy }
         : byAgentId.has(id)
           ? { gx: byAgentId.get(id)!.gx, gy: byAgentId.get(id)!.gy }
           : null;
@@ -212,7 +219,7 @@ export default function OfficeScene({
 
     let targets: string[] = [];
     if (selectedId === HUMAN_SEAT_ID) {
-      targets = v3HumanSeat.escalationSources;
+      targets = humanSeat.escalationSources;
     } else {
       const placement = byAgentId.get(selectedId);
       if (placement) {
@@ -227,7 +234,7 @@ export default function OfficeScene({
         return { id: `${selectedId}->${targetId}`, x1: isoX(from.gx, from.gy), y1: isoY(from.gx, from.gy) - 40, x2: isoX(to.gx, to.gy), y2: isoY(to.gx, to.gy) - 40 };
       })
       .filter((line): line is { id: string; x1: number; y1: number; x2: number; y2: number } => line !== null);
-  }, [selectedId, views]);
+  }, [selectedId, views, humanSeat]);
 
   return (
     <svg
@@ -265,6 +272,11 @@ export default function OfficeScene({
         {zones.map(zone => (
           <OfficeZone key={zone.id} zone={zone} faded={!activeZones.has(zone.id)} />
         ))}
+
+        {/* Step6: 3F のみ床全面へ濃色ティントを重ねてダーク化（未指定＝1F/2F/all は不変）。 */}
+        {floorTint ? (
+          <polygon points={rectPolygon({ gx0: 0, gy0: 0, gx1: G, gy1: G })} fill={floorTint} opacity={0.72} pointerEvents="none" />
+        ) : null}
 
         {/* 中央指令席へ落ちる暖かい照明 */}
         <ellipse cx={isoX(15, 15)} cy={isoY(15, 15)} rx={260} ry={130} fill="url(#v3Warm)" />

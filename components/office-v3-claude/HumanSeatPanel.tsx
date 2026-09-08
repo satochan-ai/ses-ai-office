@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { AlertTriangle, CheckCircle2, Gavel, RotateCcw, ShieldAlert, X } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, CheckCircle2, Gavel, LayoutDashboard, RotateCcw, ShieldAlert, X } from "lucide-react";
 import type { V3AgentView, V3HumanSeat } from "@/types/officeV3Claude";
 import type { OfficeV3ApprovalState, OfficeV3DemoScenario, OfficeV3DemoStatus } from "@/types/officeV3ClaudeDemo";
 import s from "./OfficeV3.module.css";
@@ -85,6 +86,11 @@ export default function HumanSeatPanel({
       <p className={s.detailRole}>
         AIでは確定できない重要判断を承認します。{seat.subLabel}として、AI経営参謀・AI営業Mgr・AI品質管理からの提案／報告／警告を確認します。
       </p>
+
+      <Link href="/dashboard" className={s.humanSeatDashboardLink}>
+        <LayoutDashboard size={13} aria-hidden="true" />
+        Dashboardを開く（承認待ち・要確認・リスクの全体像）
+      </Link>
 
       <div className={s.detailStatus}>
         <span>本日の重要判断</span>

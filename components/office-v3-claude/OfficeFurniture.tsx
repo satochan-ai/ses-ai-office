@@ -90,12 +90,13 @@ function Chair({ facing }: { facing: string }) {
   );
 }
 
-function Desk({ w, d, accent }: { w: number; d: number; accent?: string }) {
+function Desk({ w, d, accent, variant }: { w: number; d: number; accent?: string; variant?: "darkConsole" }) {
+  const dark = variant === "darkConsole";
   return (
     <g>
       <ContactShadow rx={(w + d) * HW * 0.55} ry={(w + d) * HH * 0.55} opacity={0.17} />
-      <IsoBox wx={w / 2} wy={d / 2} h={30} top="#d9c4a4" left="#a98c69" right="#c0a37e" />
-      <IsoBox wx={w / 2 - 0.12} wy={d / 2 - 0.06} h={4} base={30} top="#e6d5ba" left="#c9b291" right="#d5c1a1" />
+      <IsoBox wx={w / 2} wy={d / 2} h={30} top={dark ? "#303b50" : "#d9c4a4"} left={dark ? "#202a3a" : "#a98c69"} right={dark ? "#273348" : "#c0a37e"} />
+      <IsoBox wx={w / 2 - 0.12} wy={d / 2 - 0.06} h={4} base={30} top={dark ? "#41516a" : "#e6d5ba"} left={dark ? "#2a3548" : "#c9b291"} right={dark ? "#35445b" : "#d5c1a1"} />
       {accent ? <polygon points={`${-w * HW * 0.4},${-w * HH * 0.4 - 34} ${w * HW * 0.4},${w * HH * 0.4 - 34} ${w * HW * 0.4},${w * HH * 0.4 - 36} ${-w * HW * 0.4},${-w * HH * 0.4 - 36}`} fill={accent} opacity={0.6} /> : null}
     </g>
   );
@@ -230,7 +231,7 @@ function Terminal() {
   );
 }
 
-function Whiteboard({ w, label }: { w: number; label?: string }) {
+function Whiteboard({ w, variant }: { w: number; variant?: "strategyBoard" }) {
   const dx = w * HW;
   const dy = w * HH;
   return (
@@ -243,7 +244,15 @@ function Whiteboard({ w, label }: { w: number; label?: string }) {
         <path d={`M${-dx + 14},${-dy - 74} L${-dx + 44},${-dy - 62} L${-dx + 66},${-dy - 74}`} />
         <path d={`M${-dx + 14},${-dy - 48} L${dx - 22},${dy - 44}`} stroke="#b08a6a" />
       </g>
-      {label ? <text className={s.deviceLabel} x={0} y={-104} textAnchor="middle">{label}</text> : null}
+      {variant === "strategyBoard" ? (
+        <g className={s.deviceLabel} textAnchor="middle" style={{ fontSize: 4, letterSpacing: 0 }}>
+          <text x={0} y={-84}>SUMMARY</text>
+          <text x={0} y={-72}>PRIORITY</text>
+          <text x={0} y={-60}>RISK / OPP</text>
+          <text x={0} y={-48}>NEXT WEEK</text>
+          <text x={0} y={-36}>WHAT-IF</text>
+        </g>
+      ) : null}
     </g>
   );
 }
@@ -283,20 +292,43 @@ function Lamp() {
   );
 }
 
+/**
+ * Step6: Vertical Handoff。1F/2F から情報が 3F へ上がる建築的な情報シャフト。
+ * ダークメタルの縦スラブ＋細いシアンライン＋「上方向を感じる」矩形3枚（上ほど明るい）。
+ * 光柱・ネオン大量・派手なパーティクルにしない。最上段だけ .screen（reduced-motion 対応）。
+ */
+function DataRiser({ accent }: { accent: string }) {
+  // IsoBox(wx=0.3,wy=0.3) の右前面は (18,y) と (0,y+9) を結ぶ稜線。矩形はこれに平行に置く。
+  const band = (hy: number, op: number, cls?: string) => (
+    <polygon points={`18,${hy} 0,${hy + 9} 0,${hy + 12} 18,${hy + 3}`} fill={accent} opacity={op} className={cls} />
+  );
+  return (
+    <g>
+      <ContactShadow rx={15} ry={8} opacity={0.18} />
+      <IsoBox wx={0.3} wy={0.3} h={98} top="#3a424f" left="#232a34" right="#2b333d" />
+      {band(-24, 0.16)}
+      {band(-48, 0.3)}
+      {band(-72, 0.5, s.screen)}
+      {/* 前面右エッジの細い1本ライン */}
+      <line x1={18} y1={0} x2={18} y2={-98} stroke={accent} strokeWidth={1.4} opacity={0.5} />
+    </g>
+  );
+}
+
 export default function OfficeFurniture({ item }: { item: V3Furniture }) {
   const x = isoX(item.gx, item.gy);
   const y = isoY(item.gx, item.gy);
   let shape: ReactNode = null;
 
   switch (item.type) {
-    case "desk": shape = <Desk w={item.width} d={item.height} accent={item.accent} />; break;
+    case "desk": shape = <Desk w={item.width} d={item.height} accent={item.accent} variant={item.variant === "darkConsole" ? "darkConsole" : undefined} />; break;
     case "commandDesk": shape = <CommandDesk w={item.width} d={item.height} />; break;
     case "chair": shape = <Chair facing={item.facing} />; break;
     // 画面上の文字は「表示面」を持つ設備だけに絞り、床の情報量を抑える。
     case "monitorBank": shape = <MonitorBank w={item.width} accent={item.accent ?? "#6f9fc0"} />; break;
     // 設備名の常時表示は削減し、家具の形そのもので存在感を伝える（ラベルは<title>ツールチップに残す）
     case "wallScreen": shape = <ScreenPanel w={item.width / 2} h={54} lift={38} accent={item.accent ?? "#6f9fc0"} />; break;
-    case "whiteboard": shape = <Whiteboard w={item.width / 2} />; break;
+    case "whiteboard": shape = <Whiteboard w={item.width / 2} variant={item.variant === "strategyBoard" ? "strategyBoard" : undefined} />; break;
     case "shelf": shape = <Shelf w={item.width} facing={item.facing} />; break;
     case "cabinet": shape = <Cabinet w={item.width} />; break;
     case "sofa": shape = <Sofa w={item.width} facing={item.facing} />; break;
@@ -307,6 +339,7 @@ export default function OfficeFurniture({ item }: { item: V3Furniture }) {
     case "plant": shape = <Plant />; break;
     case "paperStack": shape = <PaperStack />; break;
     case "lamp": shape = <Lamp />; break;
+    case "dataRiser": shape = <DataRiser accent={item.accent ?? "#7fd0e0"} />; break;
   }
 
   return (

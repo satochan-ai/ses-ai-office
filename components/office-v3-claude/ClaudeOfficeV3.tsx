@@ -250,6 +250,10 @@ export default function ClaudeOfficeV3() {
               corridors={floorLayout?.corridors}
               furniture={floorLayout?.furniture}
               viewBox={floorLayout?.viewBox}
+              /* Step6: 3F は専用の人間責任者席座標・カメラ・床ティント。all/1F/2F は undefined ＝ base。 */
+              humanSeat={floorLayout?.humanSeat}
+              areas={floorLayout?.areas}
+              floorTint={floorLayout?.floorTint}
             />
           </div>
           {selected ? (

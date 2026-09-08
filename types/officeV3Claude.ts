@@ -58,7 +58,9 @@ export type V3FurnitureType =
   | "partition"
   | "plant"
   | "paperStack"
-  | "lamp";
+  | "lamp"
+  /** Step6: 3F の Vertical Handoff（1F/2F→3F の情報シャフト）。 */
+  | "dataRiser";
 
 export type V3Furniture = {
   id: string;
@@ -74,6 +76,8 @@ export type V3Furniture = {
   zIndex?: number;
   label?: string;
   accent?: string;
+  /** 特定家具だけに適用する描画variant。未指定は既存見た目を維持する。 */
+  variant?: "darkConsole" | "strategyBoard";
 };
 
 export type V3Facing = "ne" | "nw" | "se" | "sw";
@@ -251,10 +255,20 @@ export type V3ClaudeOnlyAgentProfile = {
   finalDeliverables: string[];
 };
 
+/** カメラのズーム倍率と中心。data/officeV3ClaudeLayout.ts の v3Areas と同形。 */
+export type V3Area = {
+  id: V3AreaId;
+  label: string;
+  caption: string;
+  scale: number;
+  cx: number;
+  cy: number;
+};
+
 /**
  * Step4: フロア別の物理レイアウトデータの集約型（V3 Claude専用の単純な集約型）。
- * 現在は 1F=現行フロアそのまま、2F/3F=現行レイアウトの複製ベース（仮）。
- * 2F/3F 専用の家具・ゾーン設計、本格3F移設は後工程。既存型は作り直さない。
+ * Step6: 3F は base 参照を廃止し、専用の zones/corridors/furniture/placements/humanSeat/areas/floorTint を持つ。
+ * 1F/2F は現行どおり base を複製ベースにする。既存型は作り直さない。
  */
 export type V3FloorLayout = {
   floorId: V3FloorId;
@@ -264,6 +278,10 @@ export type V3FloorLayout = {
   placements: V3AgentPlacement[];
   /** 3F のみ「3F相当」として人間責任者席を参照で保持する（V3HumanSeat 型・データは不変）。 */
   humanSeat?: V3HumanSeat;
-  /** 将来フロア別に VIEWBOX を持てる構造。今回は3フロアとも現行 VIEWBOX を共有する。 */
+  /** フロア別 VIEWBOX。今回は3フロアとも現行 VIEWBOX を共有する。 */
   viewBox: { x: number; y: number; w: number; h: number };
+  /** フロア別のカメラ（未指定なら base の v3Areas を使う）。UI の area バーは base のまま。 */
+  areas?: readonly V3Area[];
+  /** 床全面へ重ねる濃色ティント（3F のダーク化用。未指定なら重ねない＝1F/2F/all は不変）。 */
+  floorTint?: string;
 };
