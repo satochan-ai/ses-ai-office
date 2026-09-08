@@ -255,6 +255,7 @@ export const v3Furniture: V3Furniture[] = [
 export const v3AgentPlacements: V3AgentPlacement[] = [
   {
     id: "p-manager", agentId: "manager", zoneId: "command",
+    deptId: "management", floorId: "3f",
     // facing を統括モニター方向(nw)へ。座標・scale・役割・階層は不変。
     gx: 15.2, gy: 15.4, facing: "nw", scale: 1.12, labelPosition: "right", zIndex: 2,
     deskPosition: { gx: 14.8, gy: 13.7 },
@@ -271,6 +272,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-analytics", agentId: "analytics", zoneId: "insight",
+    deptId: "analytics", floorId: "2f",
     // facing を主モニター方向(nw)へ。座標・scale・役割は不変。
     gx: 3.8, gy: 13.2, facing: "nw", scale: 1, labelPosition: "top",
     deskPosition: { gx: 2.6, gy: 12.2 },
@@ -286,6 +288,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-knowledge", agentId: "knowledge", zoneId: "insight",
+    deptId: "knowledge", floorId: "2f",
     // "left"に変更：南側の新規開拓担当とラベルが近接するため（改善1）
     gx: 7.8, gy: 17.6, facing: "nw", scale: 1, labelPosition: "left",
     deskPosition: { gx: 6.6, gy: 16.6 },
@@ -300,6 +303,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-relation", agentId: "relation", zoneId: "client",
+    deptId: "client-relation", floorId: "1f",
     gx: 13.2, gy: 4.0, facing: "nw", scale: 1, labelPosition: "top",
     deskPosition: { gx: 12.0, gy: 3.0 },
     equipment: ["顧客履歴モニター", "顧客企業カード", "ヘッドセット"],
@@ -314,6 +318,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-contract", agentId: "contract", zoneId: "client",
+    deptId: "contract", floorId: "2f",
     // "left"に変更：南東のマッチング担当とラベルが近接するため（改善1）
     gx: 17.6, gy: 8.0, facing: "nw", scale: 1, labelPosition: "left",
     deskPosition: { gx: 16.4, gy: 7.0 },
@@ -328,6 +333,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-newbiz", agentId: "newbiz", zoneId: "growth",
+    deptId: "new-business", floorId: "1f",
     gx: 13.4, gy: 22.6, facing: "nw", scale: 1, labelPosition: "top",
     deskPosition: { gx: 12.2, gy: 21.7 },
     equipment: ["電話席", "ヘッドセット", "メール端末", "企業リスト"],
@@ -341,6 +347,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-bp", agentId: "bp", zoneId: "growth",
+    deptId: "bp-alliance", floorId: "1f",
     gx: 16.8, gy: 26.8, facing: "nw", scale: 1, labelPosition: "bottom",
     deskPosition: { gx: 15.6, gy: 25.8 },
     equipment: ["BPネットワーク図", "名刺ホルダー", "商流メモ"],
@@ -354,6 +361,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-matching", agentId: "matching", zoneId: "talent",
+    deptId: "matching", floorId: "1f",
     // "bottom"に変更：北西の契約管理担当とラベルが近接するため（改善1）
     gx: 22.6, gy: 12.9, facing: "nw", scale: 1, labelPosition: "bottom",
     deskPosition: { gx: 21.8, gy: 12.3 },
@@ -368,6 +376,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-recruit", agentId: "recruit", zoneId: "talent",
+    deptId: "recruiting", floorId: "1f",
     gx: 27.4, gy: 14.6, facing: "nw", scale: 1, labelPosition: "right",
     deskPosition: { gx: 26.4, gy: 13.6 },
     equipment: ["履歴書", "候補者カード", "面談席"],
@@ -381,6 +390,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-follow", agentId: "follow", zoneId: "talent",
+    deptId: "follow", floorId: "1f",
     gx: 24.2, gy: 17.8, facing: "nw", scale: 1, labelPosition: "bottom",
     deskPosition: { gx: 24.8, gy: 16.4 },
     equipment: ["相談ソファ", "週報・契約更新端末", "面談席"],
@@ -394,6 +404,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-proposal", agentId: "proposal", zoneId: "proposal",
+    deptId: "proposal-support", floorId: "2f",
     gx: 24.4, gy: 24.2, facing: "nw", scale: 1.04, labelPosition: "right",
     deskPosition: { gx: 23.2, gy: 23.2 },
     equipment: ["推薦文モニター", "面談対策ボード", "企業分析資料", "小会議席"],
@@ -416,6 +427,7 @@ export const v3AgentPlacements: V3AgentPlacement[] = [
 export const v3CentralTeamPlacements: V3AgentPlacement[] = [
   {
     id: "p-quality", agentId: "quality", zoneId: "command",
+    deptId: "quality", floorId: "2f",
     gx: 12.0, gy: 14.6, facing: "se", scale: 1, labelPosition: "left",
     deskPosition: { gx: 12.0, gy: 14.6 },
     equipment: ["品質チェック端末", "チェックリストボード", "差し戻し履歴"],
@@ -433,6 +445,7 @@ export const v3CentralTeamPlacements: V3AgentPlacement[] = [
   },
   {
     id: "p-strategist", agentId: "strategist", zoneId: "command",
+    deptId: "strategy", floorId: "3f",
     gx: 17.8, gy: 15.3, facing: "nw", scale: 1, labelPosition: "right",
     deskPosition: { gx: 17.8, gy: 15.3 },
     equipment: ["統合ダッシュボード端末", "優先度マトリクス", "経営サマリーボード"],

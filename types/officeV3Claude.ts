@@ -1,5 +1,7 @@
 /** V3 (Claude Opus 5) 専用の型定義。V1/V2 の型とは共有しない。 */
 
+import type { V3FloorId } from "./officeV3ClaudeOrg";
+
 /** フロアグリッド座標。gx/gy は等尺グリッドのマス目、h は床からの高さ(px)。 */
 export type V3Cell = { gx: number; gy: number };
 
@@ -186,6 +188,10 @@ export type V3AgentPlacement = {
   hierarchyLevel?: V3HierarchyLevel;
   /** 報告先のagentId、または人間責任者席のID。未指定時はコード側でフォールバックする。 */
   reportsTo?: string;
+  /** 所属部署（data/officeV3ClaudeOrg.ts の V3Department.id）。組織モデル接続用。今回は画面ロジック未使用。 */
+  deptId: string;
+  /** 所属フロア（3層化の接続用）。今回は画面ロジック未使用。 */
+  floorId: V3FloorId;
 };
 
 /**
