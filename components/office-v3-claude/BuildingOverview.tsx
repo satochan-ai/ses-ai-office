@@ -57,31 +57,32 @@ function MiniScene({ floorId, layout, aiCount }: { floorId: V3FloorId; layout: V
       <rect x={0} y={0} width={236} height={92} fill="#161c28" />
       <rect x={0} y={0} width={236} height={92} fill={tint} opacity={0.82} />
       {/* 夜景ラインの示唆 */}
-      <line x1={0} y1={20} x2={236} y2={20} stroke="rgba(126,156,196,0.14)" />
-      <line x1={0} y1={72} x2={236} y2={72} stroke="rgba(126,156,196,0.10)" />
+      <line x1={0} y1={15} x2={236} y2={15} stroke="rgba(126,156,196,0.14)" />
+      <line x1={0} y1={81} x2={236} y2={81} stroke="rgba(126,156,196,0.10)" />
 
       {floorId === "3f" ? (
         <>
-          {/* 下から上へ：AI クラスタ（下）→ Decision（中）→ 承認ライン → Human 終端（上）。 */}
+          {/* 下から上へ：AI クラスタ（下）→ Decision（中）→ 承認ライン → Human 終端（上）。
+              Step13-D: 承認ラインと DECISION の間隔を広げ、責任境界を読みやすくする。 */}
           {/* AI クラスタ：Mgr ／ 参謀。cyan・neutral。 */}
           <g fill="none" stroke={CYAN} strokeWidth={1.2} opacity={0.55}>
-            <line x1={72} y1={64} x2={cx} y2={52} />
-            <line x1={164} y1={64} x2={cx} y2={52} />
+            <line x1={72} y1={68} x2={cx} y2={57} />
+            <line x1={164} y1={68} x2={cx} y2={57} />
           </g>
-          <circle cx={72} cy={68} r={6} fill={CYAN} opacity={0.85} />
-          <circle cx={164} cy={68} r={6} fill={CYAN} opacity={0.85} />
-          <text x={72} y={84} textAnchor="middle" fill="#c9d0dc" fontSize={7.5}>Mgr</text>
-          <text x={164} y={84} textAnchor="middle" fill="#c9d0dc" fontSize={7.5}>参謀</text>
+          <circle cx={72} cy={72} r={6} fill={CYAN} opacity={0.85} />
+          <circle cx={164} cy={72} r={6} fill={CYAN} opacity={0.85} />
+          <text x={72} y={87} textAnchor="middle" fill="#c9d0dc" fontSize={7}>Mgr</text>
+          <text x={164} y={87} textAnchor="middle" fill="#c9d0dc" fontSize={7}>参謀</text>
           {/* Decision ノード（中）。neutral/cyan。 */}
-          <rect x={cx - 14} y={45} width={28} height={13} rx={2} fill="rgba(99,193,199,0.16)" stroke={CYAN} strokeWidth={1} />
-          <text x={cx} y={54} textAnchor="middle" fill="#dfe6f0" fontSize={7.5} fontWeight={700}>DECISION</text>
+          <rect x={cx - 14} y={48} width={28} height={13} rx={2} fill="rgba(99,193,199,0.16)" stroke={CYAN} strokeWidth={1} />
+          <text x={cx} y={57} textAnchor="middle" fill="#dfe6f0" fontSize={7} fontWeight={700}>DECISION</text>
           {/* 責任境界（承認ライン）：AI が作る／Human が承認する の境目。gold の細い破線のみ。 */}
-          <line x1={40} y1={31} x2={196} y2={31} stroke="rgba(226,184,119,0.42)" strokeWidth={1} strokeDasharray="3 3" />
-          <text x={cx} y={40} textAnchor="middle" fill={GOLD} fontSize={7} fontWeight={700}>承認ライン</text>
-          <line x1={cx} y1={45} x2={cx} y2={24} stroke={GOLD} strokeWidth={1.4} opacity={0.7} />
+          <line x1={40} y1={28} x2={196} y2={28} stroke="rgba(226,184,119,0.42)" strokeWidth={1} strokeDasharray="3 3" />
+          <text x={cx} y={38} textAnchor="middle" fill={GOLD} fontSize={6.5} fontWeight={700}>承認ライン</text>
+          <line x1={cx} y1={48} x2={cx} y2={22} stroke={GOLD} strokeWidth={1.4} opacity={0.7} />
           {/* Human 終端（上・中央）＝最終判断・承認。gold の小アクセントのみ。 */}
-          <circle cx={cx} cy={17} r={7} fill="rgba(226,184,119,0.2)" stroke={GOLD} strokeWidth={1.7} />
-          <text x={cx} y={8} textAnchor="middle" fill={GOLD} fontSize={7.5} fontWeight={700}>HUMAN</text>
+          <circle cx={cx} cy={15} r={6.5} fill="rgba(226,184,119,0.2)" stroke={GOLD} strokeWidth={1.7} />
+          <text x={cx} y={7} textAnchor="middle" fill={GOLD} fontSize={7} fontWeight={700}>HUMAN</text>
         </>
       ) : (
         <>

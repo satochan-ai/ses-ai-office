@@ -1377,16 +1377,18 @@
 
   .floorBar {
     display: grid;
-    /* Step13-A: 「建物全体」追加で5タブ。モバイルは1行5列に収める（横スクロールを出さない）。 */
+    /* Step13-A: 「建物全体」追加で5タブ。モバイルは1行5列に収める（横スクロールを出さない）。
+       Step13-D: gap を詰め、ラベルは clamp で 320〜430px 帯を安全にカバー（新breakpoint不要）。 */
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 5px;
+    gap: 4px;
   }
 
-  .floorBar button { padding: 5px 4px; text-align: center; }
-  .floorBar button b { font-size: 12px; }
+  .floorBar button { padding: 5px 3px; text-align: center; }
+  .floorBar button b { font-size: clamp(10px, 3vw, 12px); }
   .floorBar button small { display: none; }
 
-  .floorMeta { font-size: 10px; }
+  /* Step13-D: CJK 語中改行を止め、「人間責任者席」等がバラけないようにする。 */
+  .floorMeta { font-size: 9.5px; line-height: 1.5; word-break: keep-all; }
 
   .areaBar {
     display: grid;

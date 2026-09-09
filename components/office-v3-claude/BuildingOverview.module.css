@@ -80,11 +80,18 @@
   transform: translateY(-50%);
 }
 
-/* hover / focus は cyan・surface 差でナビゲーションを示す。gold は使わない（人間責任者の意味に予約）。 */
-.card:hover {
-  background: rgba(99, 193, 199, 0.09);
-  border-color: rgba(99, 193, 199, 0.45);
-  transform: translateY(-1px);
+/* hover / focus は cyan・surface 差でナビゲーションを示す。gold は使わない（人間責任者の意味に予約）。
+   Step13-D: hover 表現はマウス端末のみ（タッチでの hover 残留を避ける）。focus-visible は全環境で有効。 */
+@media (hover: hover) {
+  .card:hover {
+    background: rgba(99, 193, 199, 0.09);
+    border-color: rgba(99, 193, 199, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .card:hover .cardCta {
+    color: #bfeef1;
+  }
 }
 
 .card:focus-visible {
@@ -93,7 +100,6 @@
   border-color: rgba(99, 193, 199, 0.55);
 }
 
-.card:hover .cardCta,
 .card:focus-visible .cardCta {
   color: #bfeef1;
 }
@@ -261,34 +267,61 @@
 
 @media (max-width: 900px) {
   .root {
-    padding: 14px 12px 12px;
+    padding: 13px 10px 12px;
   }
 
+  /* Step13-D: モバイルは内部スクロールをやめ、ページ全体スクロールへ一本化（二重スクロール回避）。 */
   .inner {
-    max-height: calc(100vh - 210px);
+    max-height: none;
+    overflow: visible;
   }
 
-  /* Step13-C: モバイルは Riser を細く内側へ寄せ、カード幅を圧迫しない。 */
+  /* Step13-C/D: Riser 列と gap を詰め、カード幅を確保。Riser は非表示にしない。 */
   .stack {
-    grid-template-columns: 18px minmax(0, 1fr);
-    column-gap: 8px;
+    grid-template-columns: 16px minmax(0, 1fr);
+    column-gap: 7px;
+    row-gap: 10px;
   }
 
+  /* Step13-D: 情報は残したまま padding / gap / 文字サイズで密度を上げる。 */
   .card {
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
+    gap: 6px;
+    padding: 9px 12px;
   }
 
+  .cardMeta {
+    gap: 2px;
+  }
+
+  .floorNum {
+    font-size: 18px;
+  }
+
+  .floorAction {
+    font-size: 12px;
+  }
+
+  /* Step13-D: カード左ティックを Riser の spine まで届かせて接続感を出す。 */
   .card::before {
-    left: -9px;
-    width: 9px;
+    left: -15px;
+    width: 15px;
   }
 
   .riserCore {
     width: 5px;
   }
 
+  /* Step13-D: ミニシーンは横幅いっぱいにせず中央寄せで少し小さく（縦圧縮はしない）。 */
   .miniScene {
-    width: 100%;
+    width: 86%;
+    max-width: 244px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .flowNote {
+    font-size: 10px;
+    word-break: keep-all;
   }
 }
