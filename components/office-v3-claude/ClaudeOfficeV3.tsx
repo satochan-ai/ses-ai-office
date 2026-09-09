@@ -167,6 +167,81 @@ export default function ClaudeOfficeV3() {
   const qualityView = views.find(view => view.placement.agentId === "quality");
   const strategistView = views.find(view => view.placement.agentId === "strategist");
 
+  const demoSidebar = (
+    <div className={s.demoSidebar}>
+      <DemoWorkspacePanel
+        scenarios={demo.scenarios}
+        selectedScenarioId={demo.selectedScenarioId}
+        selectedScenario={demo.selectedScenario}
+        selectScenario={demo.selectScenario}
+        demoStatus={demo.demoStatus}
+        approvalState={demo.approvalState}
+        approvalLocked={demo.approvalLocked}
+        currentStep={demo.currentStep}
+        currentStepIndex={demo.currentStepIndex}
+        totalSteps={demo.totalSteps}
+        progressPercent={demo.progressPercent}
+        activeAgentId={demo.activeAgentId}
+        activeStatusText={demo.activeStatusText}
+        agentNames={agentNames}
+        logs={demo.logs}
+        startDemo={handleStartDemo}
+        resetDemo={demo.resetDemo}
+        approve={demo.approve}
+        reject={demo.reject}
+      />
+    </div>
+  );
+
+  const officeColumn = (
+    <div className={s.officeColumn}>
+      {floorView === "building" ? (
+        <BuildingOverview onOpenFloor={changeFloor} />
+      ) : (
+        <>
+          <div className={s.viewport}>
+            <OfficeScene
+              views={floorViews}
+              selectedId={selectedId}
+              area={area}
+              compact={compact}
+              onSelect={select}
+              activeAgentId={demo.activeAgentId}
+              activeStatusText={demo.activeStatusText}
+              showHumanSeat={showHumanSeat}
+              humanSeatVariant={floorView === "3f" ? "executive" : "default"}
+              zones={floorLayout?.zones}
+              corridors={floorLayout?.corridors}
+              furniture={floorLayout?.furniture}
+              viewBox={floorLayout?.viewBox}
+              humanSeat={floorLayout?.humanSeat}
+              areas={floorLayout?.areas}
+              floorTint={floorLayout?.floorTint}
+            />
+          </div>
+          {selected ? (
+            <AgentDetailPanel view={selected} onClose={close} />
+          ) : isHumanSeatSelected ? (
+            <HumanSeatPanel
+              seat={v3HumanSeat}
+              managerView={managerView}
+              qualityView={qualityView}
+              strategistView={strategistView}
+              onClose={close}
+              demoStatus={demo.demoStatus}
+              approvalState={demo.approvalState}
+              approvalLocked={demo.approvalLocked}
+              scenario={demo.selectedScenario}
+              demoStepTitle={demo.currentStep?.title}
+              onApprove={demo.approve}
+              onReject={demo.reject}
+            />
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className={s.page}>
       <header className={s.header}>
@@ -244,84 +319,17 @@ export default function ClaudeOfficeV3() {
       ) : null}
 
       <main className={s.stage}>
-        {/* DOM順・Tab順・読み上げ順で主要操作（シナリオ選択・デモ開始等）へ先に到達できるよう、
-            デモワークスペースをオフィス本体より前に配置する。PCの視覚順（左：オフィス／右：デモ）は
-            OfficeV3.module.css側のCSS order（.officeColumn/.demoSidebar）で維持している。 */}
-        <div className={s.demoSidebar}>
-          <DemoWorkspacePanel
-            scenarios={demo.scenarios}
-            selectedScenarioId={demo.selectedScenarioId}
-            selectedScenario={demo.selectedScenario}
-            selectScenario={demo.selectScenario}
-            demoStatus={demo.demoStatus}
-            approvalState={demo.approvalState}
-            approvalLocked={demo.approvalLocked}
-            currentStep={demo.currentStep}
-            currentStepIndex={demo.currentStepIndex}
-            totalSteps={demo.totalSteps}
-            progressPercent={demo.progressPercent}
-            activeAgentId={demo.activeAgentId}
-            activeStatusText={demo.activeStatusText}
-            agentNames={agentNames}
-            logs={demo.logs}
-            startDemo={handleStartDemo}
-            resetDemo={demo.resetDemo}
-            approve={demo.approve}
-            reject={demo.reject}
-          />
-        </div>
-
-        <div className={s.officeColumn}>
-          {floorView === "building" ? (
-            /* Step13-A: 建物全体オーバービュー。OfficeScene は使わず軽量表示。1F/2F/3F/all は従来どおり。 */
-            <BuildingOverview onOpenFloor={changeFloor} />
-          ) : (
+        {floorView === "building" ? (
           <>
-          <div className={s.viewport}>
-            <OfficeScene
-              views={floorViews}
-              selectedId={selectedId}
-              area={area}
-              compact={compact}
-              onSelect={select}
-              activeAgentId={demo.activeAgentId}
-              activeStatusText={demo.activeStatusText}
-              showHumanSeat={showHumanSeat}
-              /* B-1: 3F は Decision Floor 用の人間責任者席表示。座標では判定しない。 */
-              humanSeatVariant={floorView === "3f" ? "executive" : "default"}
-              /* Step4: 1f/2f/3f はフロア別レイアウトを渡す。all は未指定＝OfficeScene 側の
-                 base（現行）レイアウトが使われる（互換表示）。 */
-              zones={floorLayout?.zones}
-              corridors={floorLayout?.corridors}
-              furniture={floorLayout?.furniture}
-              viewBox={floorLayout?.viewBox}
-              /* Step6: 3F は専用の人間責任者席座標・カメラ・床ティント。all/1F/2F は undefined ＝ base。 */
-              humanSeat={floorLayout?.humanSeat}
-              areas={floorLayout?.areas}
-              floorTint={floorLayout?.floorTint}
-            />
-          </div>
-          {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} />
-          ) : isHumanSeatSelected ? (
-            <HumanSeatPanel
-              seat={v3HumanSeat}
-              managerView={managerView}
-              qualityView={qualityView}
-              strategistView={strategistView}
-              onClose={close}
-              demoStatus={demo.demoStatus}
-              approvalState={demo.approvalState}
-              approvalLocked={demo.approvalLocked}
-              scenario={demo.selectedScenario}
-              demoStepTitle={demo.currentStep?.title}
-              onApprove={demo.approve}
-              onReject={demo.reject}
-            />
-          ) : null}
+            {officeColumn}
+            {demoSidebar}
           </>
-          )}
-        </div>
+        ) : (
+          <>
+            {demoSidebar}
+            {officeColumn}
+          </>
+        )}
       </main>
 
       <p className={s.hint}>
