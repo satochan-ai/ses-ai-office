@@ -25,8 +25,9 @@ import s from "./OfficeV3.module.css";
  * Step13-A: 先頭に「建物全体」（BUILDING OVERVIEW）を追加。"全体" は従来どおり all/base の意味。
  */
 const FLOOR_TABS: { id: V3FloorView; label: string; sub: string }[] = [
-  { id: "building", label: "建物全体", sub: "3階建て" },
-  { id: "all", label: "全体", sub: "全フロア" },
+  // Step13-B: sub で「建物全体（3階構造の理解）」と「全体（13名の同一シーン＝デモの舞台）」を読み分けられるようにする。
+  { id: "building", label: "建物全体", sub: "3階構造" },
+  { id: "all", label: "全体", sub: "13名全景" },
   ...[...v3Floors]
     .sort((a, b) => a.order - b.order)
     .map(floor => ({ id: floor.id, label: floor.id.toUpperCase(), sub: floor.name.replace(/フロア$/u, "") })),
@@ -199,6 +200,7 @@ export default function ClaudeOfficeV3() {
             disabled={demoBusy}
             className={floorView === tab.id ? s.floorActive : undefined}
             aria-pressed={floorView === tab.id}
+            aria-current={floorView === tab.id ? "true" : undefined}
           >
             <b>{tab.label}</b>
             <small>{tab.sub}</small>

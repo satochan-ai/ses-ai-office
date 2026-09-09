@@ -207,10 +207,12 @@
   text-overflow: ellipsis;
 }
 
+/* Step13-B: フロア切替の選択中タブは cyan / surface 差で示す（gold は人間責任者の意味に予約）。
+   非視覚的にも aria-pressed / aria-current="true" で選択状態を伝える。 */
 .floorActive {
-  border-color: rgba(226, 184, 119, 0.72) !important;
-  background: rgba(226, 184, 119, 0.2) !important;
-  color: #f9edd8 !important;
+  border-color: rgba(99, 193, 199, 0.78) !important;
+  background: rgba(99, 193, 199, 0.17) !important;
+  color: #eaf6f7 !important;
 }
 
 .floorBar button:focus-visible {

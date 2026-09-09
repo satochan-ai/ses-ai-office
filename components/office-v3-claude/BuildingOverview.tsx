@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp } from "lucide-react";
+import { ArrowRight, ArrowUp } from "lucide-react";
 import { v3Layout1f } from "@/data/officeV3ClaudeLayout.1f";
 import { v3Layout2f } from "@/data/officeV3ClaudeLayout.2f";
 import { v3Layout3f } from "@/data/officeV3ClaudeLayout.3f";
@@ -115,7 +115,7 @@ export default function BuildingOverview({ onOpenFloor }: Props) {
                   type="button"
                   className={s.card}
                   onClick={() => onOpenFloor(floorId)}
-                  aria-label={`${floorId.toUpperCase()} ${floor.name}を開く`}
+                  aria-label={`${floorId.toUpperCase()} ${floor.name}を見る`}
                 >
                   <span className={s.cardMeta}>
                     <span className={s.floorTopline}>
@@ -124,9 +124,14 @@ export default function BuildingOverview({ onOpenFloor }: Props) {
                       <span className={s.floorRole}>{floor.name}</span>
                     </span>
                     <span className={s.floorAction}>{CARD_TEXT[floorId].action}</span>
-                    <span className={s.floorCount}>
-                      AI {aiCount}名
-                      {hasHuman ? <span className={s.humanTag}>　＋　Human（最終判断・承認）</span> : null}
+                    <span className={s.floorCount}>AI {aiCount}名</span>
+                    {hasHuman ? (
+                      <span className={s.humanLine}>＋ Human 1席（最終判断・承認）</span>
+                    ) : null}
+                    {/* CTA は装飾（button 全体が既に clickable）。nested interactive にしない。 */}
+                    <span className={s.cardCta} aria-hidden="true">
+                      このフロアを見る
+                      <ArrowRight size={13} />
                     </span>
                   </span>
                   <MiniScene floorId={floorId} layout={layout} aiCount={aiCount} />
