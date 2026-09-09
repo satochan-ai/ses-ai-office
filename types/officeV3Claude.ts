@@ -30,10 +30,11 @@ export type V3AreaId = "all" | "north" | "center" | "south";
 
 /**
  * 組織上の「階」の表示切り替え（Step3で導入）。
+ * "building" = 建物全体オーバービュー（1F/2F/3F を縦積みした軽量表示。Step13-A）。
  * "all" = 13名全員 ／ "1f"|"2f"|"3f" = その階の所属AIのみ。
  * 既存の V3AreaId（1枚の物理フロア内をズームする下位概念）とは別の state で管理する。
  */
-export type V3FloorView = "all" | V3FloorId;
+export type V3FloorView = "building" | "all" | V3FloorId;
 
 export type V3Corridor = {
   id: string;

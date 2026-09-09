@@ -13,16 +13,19 @@ import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
 import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
+import BuildingOverview from "./BuildingOverview";
 import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import s from "./OfficeV3.module.css";
 
 /**
- * 組織フロアの切替タブ（上位概念）。"all" と v3Floors(order順) から生成する。
- * Step4: 1F/2F/3F はフロア別レイアウト（V3FloorLayout）を選択。2F/3F の個別デザインは後工程。
+ * 組織フロアの切替タブ（上位概念）。"building" + "all" + v3Floors(order順) から生成する。
+ * Step4: 1F/2F/3F はフロア別レイアウト（V3FloorLayout）を選択。
+ * Step13-A: 先頭に「建物全体」（BUILDING OVERVIEW）を追加。"全体" は従来どおり all/base の意味。
  */
 const FLOOR_TABS: { id: V3FloorView; label: string; sub: string }[] = [
+  { id: "building", label: "建物全体", sub: "3階建て" },
   { id: "all", label: "全体", sub: "全フロア" },
   ...[...v3Floors]
     .sort((a, b) => a.order - b.order)
@@ -203,7 +206,11 @@ export default function ClaudeOfficeV3() {
         ))}
       </nav>
       <p className={s.floorMeta}>
-        {activeFloor ? (
+        {floorView === "building" ? (
+          <>
+            <b>BUILDING OVERVIEW</b>　3階建て AI組織　／　AI社員 {aiCount}名　＋　人間責任者席
+          </>
+        ) : activeFloor ? (
           <>
             <b>{activeFloor.caption}</b>　{activeFloor.name}　／　AI社員 {aiCount}名
             {floorView === "3f" ? "　＋　人間責任者" : ""}
@@ -215,21 +222,24 @@ export default function ClaudeOfficeV3() {
         )}
       </p>
 
-      {/* 表示エリアの切り替え（下位概念：1枚の物理フロア内をズーム）。 */}
-      <nav className={s.areaBar} aria-label="表示エリアの切り替え">
-        {areaTabs.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setArea(item.id)}
-            className={area === item.id ? s.areaActive : undefined}
-            aria-pressed={area === item.id}
-          >
-            <b>{item.id === "all" ? "全景" : item.label}</b>
-            <small>{item.caption}</small>
-          </button>
-        ))}
-      </nav>
+      {/* 表示エリアの切り替え（下位概念：1枚の物理フロア内をズーム）。
+          Step13-A: 建物全体オーバービューには north/center/south の概念がないため非表示。 */}
+      {floorView !== "building" ? (
+        <nav className={s.areaBar} aria-label="表示エリアの切り替え">
+          {areaTabs.map(item => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setArea(item.id)}
+              className={area === item.id ? s.areaActive : undefined}
+              aria-pressed={area === item.id}
+            >
+              <b>{item.id === "all" ? "全景" : item.label}</b>
+              <small>{item.caption}</small>
+            </button>
+          ))}
+        </nav>
+      ) : null}
 
       <main className={s.stage}>
         {/* DOM順・Tab順・読み上げ順で主要操作（シナリオ選択・デモ開始等）へ先に到達できるよう、
@@ -260,6 +270,11 @@ export default function ClaudeOfficeV3() {
         </div>
 
         <div className={s.officeColumn}>
+          {floorView === "building" ? (
+            /* Step13-A: 建物全体オーバービュー。OfficeScene は使わず軽量表示。1F/2F/3F/all は従来どおり。 */
+            <BuildingOverview onOpenFloor={changeFloor} />
+          ) : (
+          <>
           <div className={s.viewport}>
             <OfficeScene
               views={floorViews}
@@ -302,6 +317,8 @@ export default function ClaudeOfficeV3() {
               onReject={demo.reject}
             />
           ) : null}
+          </>
+          )}
         </div>
       </main>
 

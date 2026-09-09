@@ -1375,11 +1375,12 @@
 
   .floorBar {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
+    /* Step13-A: 「建物全体」追加で5タブ。モバイルは1行5列に収める（横スクロールを出さない）。 */
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
   }
 
-  .floorBar button { padding: 5px 6px; text-align: center; }
+  .floorBar button { padding: 5px 4px; text-align: center; }
   .floorBar button b { font-size: 12px; }
   .floorBar button small { display: none; }
 
