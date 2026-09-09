@@ -12,6 +12,12 @@ type Props = {
   onSelect: (id: string) => void;
   /** デモが人間承認待ちのときだけ true。静的な`seat`データは変更しない。 */
   isDemoActive?: boolean;
+  /**
+   * どの表示コンテキストで描かれているか（座標では判定しない）。
+   * "default" = all表示（従来のラベル位置・見た目）。
+   * "executive" = 3F「Decision Floor」表示（席の真上へ縦にラベルを置く）。
+   */
+  variant?: "default" | "executive";
 };
 
 /**
@@ -19,7 +25,7 @@ type Props = {
  * 指令席の壁面モニター2枚の間の狭い間隔に収まるよう、専用デスク・意思決定モニター・
  * 承認待ち通知・簡易ステータスだけをごく小さくまとめて「最終承認者の存在」を表現する。
  */
-export default function HumanSeat({ seat, selected, dimmed, onSelect, isDemoActive = false }: Props) {
+export default function HumanSeat({ seat, selected, dimmed, onSelect, isDemoActive = false, variant = "default" }: Props) {
   const x = isoX(seat.gx, seat.gy);
   const y = isoY(seat.gx, seat.gy);
 
@@ -89,9 +95,9 @@ export default function HumanSeat({ seat, selected, dimmed, onSelect, isDemoActi
       {isDemoActive ? <ellipse className={s.humanSeatDemoActive} cx={0} cy={-30} rx={40} ry={62} /> : null}
 
       {/* 常時ラベル：人間責任者／最終判断・承認。
-          all（seat.gx≈15.4）は従来どおり左寄せ。3F（seat.gx≈11.5＝最奥中央）は
-          左に指令席があり重なるため、席の真上へ縦に配置する。 */}
-      {seat.gx <= 13 ? (
+          all（variant="default"）は従来どおり左寄せ。3F（variant="executive"）は
+          左に指令席があり重なるため、席の真上へ縦に配置する。座標では判定しない。 */}
+      {variant === "executive" ? (
         <>
           <g className={s.humanSeatLabel} transform="translate(-54,-106)">
             <rect x={0} y={-13} width={108} height={30} rx={9} />

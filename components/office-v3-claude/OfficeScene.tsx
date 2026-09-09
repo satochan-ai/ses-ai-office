@@ -146,6 +146,8 @@ type Props = {
   viewBox?: { x: number; y: number; w: number; h: number };
   /** Step6: フロア別の人間責任者席（未指定なら base の v3HumanSeat）。 */
   humanSeat?: V3HumanSeat;
+  /** B-1: 人間責任者席の表示コンテキスト。3F は "executive"、それ以外（all）は "default"。座標では判定しない。 */
+  humanSeatVariant?: "default" | "executive";
   /** Step6: フロア別カメラ（未指定なら base の v3Areas）。 */
   areas?: readonly V3Area[];
   /** Step6: 床全面へ重ねる濃色ティント（3F のダーク化。未指定なら重ねない）。 */
@@ -155,7 +157,7 @@ type Props = {
 export default function OfficeScene({
   views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText, showHumanSeat = true,
   zones = v3Zones, corridors = v3Corridors, furniture = v3Furniture, viewBox = VIEWBOX,
-  humanSeat = v3HumanSeat, areas, floorTint,
+  humanSeat = v3HumanSeat, humanSeatVariant = "default", areas, floorTint,
 }: Props) {
   const focus = (areas ?? v3Areas).find(a => a.id === area) ?? (areas ?? v3Areas)[0];
   const scale = compact && area === "all" ? focus.scale * 0.72 : focus.scale;
@@ -193,13 +195,14 @@ export default function OfficeScene({
                 dimmed={selectedId !== null && selectedId !== humanSeat.id}
                 onSelect={onSelect}
                 isDemoActive={activeAgentId === humanSeat.id}
+                variant={humanSeatVariant}
               />
             ),
           }]
         : []),
     ];
     return items.sort((a, b) => a.depth - b.depth || a.z - b.z);
-  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture, humanSeat]);
+  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture, humanSeat, humanSeatVariant]);
 
   const activeZones = new Set(zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
 

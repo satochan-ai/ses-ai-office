@@ -141,6 +141,9 @@ export default function ClaudeOfficeV3() {
   // 人間責任者席は AI社員とは別カテゴリ。表示は "all" と "3f"（human seat は 3F 相当）のときだけ。
   const showHumanSeat = floorView === "all" || floorView === "3f";
   const activeFloor = floorView === "all" ? null : v3Floors.find(floor => floor.id === floorView) ?? null;
+  // B-2: 専用レイアウトを持つフロアでは area バーの表示文言もそのフロアの areas を使う。
+  //   all（floorLayout=null）は従来どおり base の v3Areas。カメラ値・切替ロジックは変更しない。
+  const areaTabs = floorLayout?.areas ?? v3Areas;
   // デモ進行中はフロア切替を止める（全13名前提のため）。切替時は area を初期値へ、選択も解除。
   const demoBusy = demo.demoStatus === "running" || demo.demoStatus === "awaiting-approval";
   const changeFloor = useCallback((next: V3FloorView) => {
@@ -214,7 +217,7 @@ export default function ClaudeOfficeV3() {
 
       {/* 表示エリアの切り替え（下位概念：1枚の物理フロア内をズーム）。 */}
       <nav className={s.areaBar} aria-label="表示エリアの切り替え">
-        {v3Areas.map(item => (
+        {areaTabs.map(item => (
           <button
             key={item.id}
             type="button"
@@ -267,6 +270,8 @@ export default function ClaudeOfficeV3() {
               activeAgentId={demo.activeAgentId}
               activeStatusText={demo.activeStatusText}
               showHumanSeat={showHumanSeat}
+              /* B-1: 3F は Decision Floor 用の人間責任者席表示。座標では判定しない。 */
+              humanSeatVariant={floorView === "3f" ? "executive" : "default"}
               /* Step4: 1f/2f/3f はフロア別レイアウトを渡す。all は未指定＝OfficeScene 側の
                  base（現行）レイアウトが使われる（互換表示）。 */
               zones={floorLayout?.zones}
