@@ -159,8 +159,8 @@ export const v3Furniture: V3Furniture[] = [
   /* 受付・エントランス */
   { id: "rec-feed", type: "wallScreen", zoneId: "reception", gx: 3.0, gy: 2.4, width: 2.6, height: 0.5, facing: "se", label: "外部データ", accent: "#5b8bb5" },
   { id: "rec-counter", type: "counter", zoneId: "reception", gx: 4.8, gy: 4.6, width: 4.0, height: 1.5, facing: "se", label: "受付" },
-  { id: "rec-terminal-job", type: "terminal", zoneId: "reception", gx: 8.2, gy: 3.2, width: 1.0, height: 1.0, facing: "sw", label: "新着案件" },
-  { id: "rec-terminal-talent", type: "terminal", zoneId: "reception", gx: 3.2, gy: 8.2, width: 1.0, height: 1.0, facing: "ne", label: "新着要員" },
+  { id: "rec-terminal-job", type: "terminal", zoneId: "reception", gx: 8.2, gy: 3.2, width: 1.0, height: 1.0, facing: "sw", label: "新着案件", workLabel: "新着案件" },
+  { id: "rec-terminal-talent", type: "terminal", zoneId: "reception", gx: 3.2, gy: 8.2, width: 1.0, height: 1.0, facing: "ne", label: "新着要員", workLabel: "新着要員" },
   { id: "rec-sofa", type: "sofa", zoneId: "reception", gx: 7.4, gy: 7.0, width: 2.4, height: 1.3, facing: "nw", label: "来客" },
   { id: "rec-plant-a", type: "plant", zoneId: "reception", gx: 8.7, gy: 5.6, width: 1, height: 1, facing: "se" },
   { id: "rec-plant-b", type: "plant", zoneId: "reception", gx: 5.6, gy: 8.7, width: 1, height: 1, facing: "se" },
@@ -209,7 +209,7 @@ export const v3Furniture: V3Furniture[] = [
   { id: "cmd-plant", type: "plant", zoneId: "command", gx: 12.2, gy: 17.8, width: 1, height: 1, facing: "se" },
 
   /* 人材・稼働 */
-  { id: "tal-monitors", type: "monitorBank", zoneId: "talent", gx: 21.8, gy: 11.8, width: 2.8, height: 0.6, facing: "se", label: "案件×要員比較", accent: "#9a7bb0" },
+  { id: "tal-monitors", type: "monitorBank", zoneId: "talent", gx: 21.8, gy: 11.8, width: 2.8, height: 0.6, facing: "se", label: "案件×要員比較", accent: "#9a7bb0", workLabel: "JOB × TALENT" },
   { id: "tal-desk-a", type: "desk", zoneId: "talent", gx: 21.8, gy: 12.3, width: 3.0, height: 1.7, facing: "se", label: "マッチング席" },
   { id: "tal-cards", type: "paperStack", zoneId: "talent", gx: 25.2, gy: 11.9, width: 1.2, height: 1.0, facing: "se", label: "候補者カード" },
   { id: "tal-desk-b", type: "desk", zoneId: "talent", gx: 26.4, gy: 13.6, width: 2.8, height: 1.7, facing: "sw", label: "履歴書・面談席" },

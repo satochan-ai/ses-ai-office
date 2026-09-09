@@ -231,6 +231,19 @@ function Terminal() {
   );
 }
 
+/**
+ * Step15-B: 業務設備ラベル。指定した設備だけに「何をする場所か」を短く常時表示する。
+ * <g aria-hidden> 内に置く装飾テキストで、Tab stop は増やさない。
+ * .deviceLabel は AI社員の役割ラベルより小さく、主役はあくまで人物のまま。
+ */
+function EquipmentLabel({ text, y }: { text: string; y: number }) {
+  return (
+    <text className={s.deviceLabel} x={0} y={y} textAnchor="middle">
+      {text}
+    </text>
+  );
+}
+
 function Whiteboard({ w, variant }: { w: number; variant?: "strategyBoard" | "qualityBoard" }) {
   const dx = w * HW;
   const dy = w * HH;
@@ -334,7 +347,14 @@ export default function OfficeFurniture({ item }: { item: V3Furniture }) {
     case "commandDesk": shape = <CommandDesk w={item.width} d={item.height} />; break;
     case "chair": shape = <Chair facing={item.facing} />; break;
     // 画面上の文字は「表示面」を持つ設備だけに絞り、床の情報量を抑える。
-    case "monitorBank": shape = <MonitorBank w={item.width} accent={item.accent ?? "#6f9fc0"} />; break;
+    case "monitorBank":
+      shape = (
+        <>
+          <MonitorBank w={item.width} accent={item.accent ?? "#6f9fc0"} />
+          {item.workLabel ? <EquipmentLabel text={item.workLabel} y={-90} /> : null}
+        </>
+      );
+      break;
     // 設備名の常時表示は削減し、家具の形そのもので存在感を伝える（ラベルは<title>ツールチップに残す）
     case "wallScreen": shape = <ScreenPanel w={item.width / 2} h={54} lift={38} accent={item.accent ?? "#6f9fc0"} />; break;
     case "whiteboard": shape = <Whiteboard w={item.width / 2} variant={item.variant === "strategyBoard" || item.variant === "qualityBoard" ? item.variant : undefined} />; break;
@@ -343,7 +363,14 @@ export default function OfficeFurniture({ item }: { item: V3Furniture }) {
     case "sofa": shape = <Sofa w={item.width} facing={item.facing} />; break;
     case "roundTable": shape = <RoundTable w={item.width} />; break;
     case "counter": shape = <Counter w={item.width} />; break;
-    case "terminal": shape = <Terminal />; break;
+    case "terminal":
+      shape = (
+        <>
+          <Terminal />
+          {item.workLabel ? <EquipmentLabel text={item.workLabel} y={-96} /> : null}
+        </>
+      );
+      break;
     case "partition": shape = <Partition w={item.width / 2} />; break;
     case "plant": shape = <Plant />; break;
     case "paperStack": shape = <PaperStack />; break;

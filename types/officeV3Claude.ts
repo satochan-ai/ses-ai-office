@@ -79,6 +79,11 @@ export type V3Furniture = {
   accent?: string;
   /** 特定家具だけに適用する描画variant。未指定は既存見た目を維持する。 */
   variant?: "darkConsole" | "strategyBoard" | "qualityBoard";
+  /**
+   * Step15-B: 業務設備ラベル。指定した設備だけに「何の業務をする場所か」を短く常時表示する（装飾）。
+   * 未指定なら従来どおり表示なし。terminal / monitorBank のみ描画対象。
+   */
+  workLabel?: string;
 };
 
 export type V3Facing = "ne" | "nw" | "se" | "sw";
