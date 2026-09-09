@@ -318,7 +318,7 @@ export default function ClaudeOfficeV3() {
         </nav>
       ) : null}
 
-      <main className={s.stage}>
+      <main className={`${s.stage} ${floorView === "building" ? s.stageBuilding : ""}`}>
         {floorView === "building" ? (
           <>
             {officeColumn}

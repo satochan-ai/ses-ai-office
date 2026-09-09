@@ -1429,6 +1429,16 @@
     margin-bottom: 10px;
   }
 
+  /* Step14-C: 建物全体オーバービューのときだけ、モバイルの視覚順も DOM/Tab/読み上げ順に合わせる
+     （Building Overview → Demo workspace）。通常フロアは上記「デモ→オフィス」を維持。 */
+  .stageBuilding .officeColumn {
+    order: 1;
+  }
+
+  .stageBuilding .demoSidebar {
+    order: 2;
+  }
+
   .demoWorkspace {
     max-height: none;
     overflow-y: visible;
