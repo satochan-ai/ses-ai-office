@@ -1,23 +1,27 @@
 "use client";
 
-import { ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { v3Layout1f } from "@/data/officeV3ClaudeLayout.1f";
 import { v3Layout2f } from "@/data/officeV3ClaudeLayout.2f";
 import { v3Layout3f } from "@/data/officeV3ClaudeLayout.3f";
 import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import type { V3FloorLayout } from "@/types/officeV3Claude";
 import type { V3FloorId } from "@/types/officeV3ClaudeOrg";
+import BuildingRiser from "./BuildingRiser";
 import s from "./BuildingOverview.module.css";
 
 /**
- * Step13-A: BUILDING OVERVIEW（建物全体）MVP。
+ * Step13-A: BUILDING OVERVIEW（建物全体）。
+ * Step13-C: フロア間の個別コネクタを廃し、1F→2F→3F→Human を一本で貫く BuildingRiser に統合。
+ *           3F は「AI クラスタ → Decision → 承認ライン → Human 終端」の順で責任境界を明示。
+ *           ミニシーンは aspect-ratio で縦圧縮を解消。
  *
  * 目的：1F/2F/3F を「上：3F → 下：1F」に縦積みした軽量オーバービューを見せ、
  * 各フロアカードから既存の 1F/2F/3F 詳細（floorView）へ入れる導線をつくる。
  *
  * - OfficeScene は再利用しない（×3 レンダーしない）。各フロアは専用の軽量 SVG。
  * - 人数・フロア名・floorTint は既存データ（v3Floors / v3LayoutXf）から導出し、重複ハードコードしない。
- * - dataRiser の本格表現・motion・HumanSeat 責任境界 polish は後続 Step。ここでは細い縦コネクタ1本のみ。
+ * - motion / keyframes は入れない（静的）。
  */
 
 type Props = {
@@ -53,25 +57,31 @@ function MiniScene({ floorId, layout, aiCount }: { floorId: V3FloorId; layout: V
       <rect x={0} y={0} width={236} height={92} fill="#161c28" />
       <rect x={0} y={0} width={236} height={92} fill={tint} opacity={0.82} />
       {/* 夜景ラインの示唆 */}
-      <line x1={0} y1={22} x2={236} y2={22} stroke="rgba(126,156,196,0.14)" />
-      <line x1={0} y1={70} x2={236} y2={70} stroke="rgba(126,156,196,0.10)" />
+      <line x1={0} y1={20} x2={236} y2={20} stroke="rgba(126,156,196,0.14)" />
+      <line x1={0} y1={72} x2={236} y2={72} stroke="rgba(126,156,196,0.10)" />
 
       {floorId === "3f" ? (
         <>
-          {/* 逆三角形：Human（上・中央）／ Mgr（左）／ 参謀（右）＋ 判断ノード */}
-          <g fill="none" stroke={CYAN} strokeWidth={1.2} opacity={0.5}>
-            <line x1={cx} y1={26} x2={70} y2={58} />
-            <line x1={cx} y1={26} x2={166} y2={58} />
-            <line x1={70} y1={58} x2={166} y2={58} />
+          {/* 下から上へ：AI クラスタ（下）→ Decision（中）→ 承認ライン → Human 終端（上）。 */}
+          {/* AI クラスタ：Mgr ／ 参謀。cyan・neutral。 */}
+          <g fill="none" stroke={CYAN} strokeWidth={1.2} opacity={0.55}>
+            <line x1={72} y1={64} x2={cx} y2={52} />
+            <line x1={164} y1={64} x2={cx} y2={52} />
           </g>
-          <circle cx={70} cy={58} r={6} fill={CYAN} opacity={0.85} />
-          <circle cx={166} cy={58} r={6} fill={CYAN} opacity={0.85} />
-          <rect x={cx - 9} y={54} width={18} height={12} fill="rgba(99,193,199,0.16)" stroke={CYAN} strokeWidth={1} />
-          {/* HumanSeat：金の小アクセントのみ */}
-          <circle cx={cx} cy={26} r={7} fill="rgba(226,184,119,0.18)" stroke={GOLD} strokeWidth={1.6} />
-          <text x={cx} y={16} textAnchor="middle" fill={GOLD} fontSize={8} fontWeight={700}>HUMAN</text>
-          <text x={70} y={76} textAnchor="middle" fill="#c9d0dc" fontSize={7.5}>Mgr</text>
-          <text x={166} y={76} textAnchor="middle" fill="#c9d0dc" fontSize={7.5}>参謀</text>
+          <circle cx={72} cy={68} r={6} fill={CYAN} opacity={0.85} />
+          <circle cx={164} cy={68} r={6} fill={CYAN} opacity={0.85} />
+          <text x={72} y={84} textAnchor="middle" fill="#c9d0dc" fontSize={7.5}>Mgr</text>
+          <text x={164} y={84} textAnchor="middle" fill="#c9d0dc" fontSize={7.5}>参謀</text>
+          {/* Decision ノード（中）。neutral/cyan。 */}
+          <rect x={cx - 14} y={45} width={28} height={13} rx={2} fill="rgba(99,193,199,0.16)" stroke={CYAN} strokeWidth={1} />
+          <text x={cx} y={54} textAnchor="middle" fill="#dfe6f0" fontSize={7.5} fontWeight={700}>DECISION</text>
+          {/* 責任境界（承認ライン）：AI が作る／Human が承認する の境目。gold の細い破線のみ。 */}
+          <line x1={40} y1={31} x2={196} y2={31} stroke="rgba(226,184,119,0.42)" strokeWidth={1} strokeDasharray="3 3" />
+          <text x={cx} y={40} textAnchor="middle" fill={GOLD} fontSize={7} fontWeight={700}>承認ライン</text>
+          <line x1={cx} y1={45} x2={cx} y2={24} stroke={GOLD} strokeWidth={1.4} opacity={0.7} />
+          {/* Human 終端（上・中央）＝最終判断・承認。gold の小アクセントのみ。 */}
+          <circle cx={cx} cy={17} r={7} fill="rgba(226,184,119,0.2)" stroke={GOLD} strokeWidth={1.7} />
+          <text x={cx} y={8} textAnchor="middle" fill={GOLD} fontSize={7.5} fontWeight={700}>HUMAN</text>
         </>
       ) : (
         <>
@@ -80,7 +90,7 @@ function MiniScene({ floorId, layout, aiCount }: { floorId: V3FloorId; layout: V
           {Array.from({ length: aiCount }).map((_, i) => {
             const angle = (Math.PI * 2 * i) / aiCount - Math.PI / 2;
             const nx = cx + Math.cos(angle) * 78;
-            const ny = cy + Math.sin(angle) * 30;
+            const ny = cy + Math.sin(angle) * 28;
             return (
               <g key={i}>
                 <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={CYAN} strokeWidth={1} opacity={0.35} />
@@ -88,12 +98,14 @@ function MiniScene({ floorId, layout, aiCount }: { floorId: V3FloorId; layout: V
               </g>
             );
           })}
+          <text x={cx} y={cy + 3} textAnchor="middle" fill="#dfe6f0" fontSize={8.5} fontWeight={700} letterSpacing={0.4}>
+            {CARD_TEXT[floorId].center}
+          </text>
+          {/* 上へ送る（成果物を BuildingRiser へ）。1F は入口、2F は Quality Gate 経由。 */}
+          <line x1={cx} y1={cy - 12} x2={cx} y2={12} stroke={CYAN} strokeWidth={1.4} opacity={0.6} />
+          <path d={`M${cx - 4} 17 L${cx} 11 L${cx + 4} 17`} fill="none" stroke={CYAN} strokeWidth={1.4} opacity={0.8} strokeLinecap="round" strokeLinejoin="round" />
         </>
       )}
-
-      <text x={cx} y={cy + 3} textAnchor="middle" fill="#dfe6f0" fontSize={8.5} fontWeight={700} letterSpacing={0.4}>
-        {CARD_TEXT[floorId].center}
-      </text>
     </svg>
   );
 }
@@ -103,56 +115,50 @@ export default function BuildingOverview({ onOpenFloor }: Props) {
     <div className={s.root}>
       <div className={s.inner}>
         <div className={s.stack}>
-          {FLOOR_ORDER.map(({ floorId, layout }, index) => {
+          {/* 1F→2F→3F→Human を一本で貫く Vertical Handoff（装飾。意味は flowNote / humanLine が担保）。 */}
+          <BuildingRiser />
+
+          {FLOOR_ORDER.map(({ floorId, layout }) => {
             const floor = v3Floors.find(f => f.id === floorId)!;
             const aiCount = layout.placements.length;
             const hasHuman = Boolean(layout.humanSeat);
             const caption = CARD_TEXT[floorId].captionOverride ?? floor.caption;
 
             return (
-              <div key={floorId}>
-                <button
-                  type="button"
-                  className={s.card}
-                  onClick={() => onOpenFloor(floorId)}
-                  aria-label={`${floorId.toUpperCase()} ${floor.name}を見る`}
-                >
-                  <span className={s.cardMeta}>
-                    <span className={s.floorTopline}>
-                      <span className={s.floorNum}>{floorId.toUpperCase()}</span>
-                      <span className={s.floorEn}>{caption}</span>
-                      <span className={s.floorRole}>{floor.name}</span>
-                    </span>
-                    <span className={s.floorAction}>{CARD_TEXT[floorId].action}</span>
-                    <span className={s.floorCount}>AI {aiCount}名</span>
-                    {hasHuman ? (
-                      <span className={s.humanLine}>＋ Human 1席（最終判断・承認）</span>
-                    ) : null}
-                    {/* CTA は装飾（button 全体が既に clickable）。nested interactive にしない。 */}
-                    <span className={s.cardCta} aria-hidden="true">
-                      このフロアを見る
-                      <ArrowRight size={13} />
-                    </span>
+              <button
+                key={floorId}
+                type="button"
+                className={s.card}
+                onClick={() => onOpenFloor(floorId)}
+                aria-label={`${floorId.toUpperCase()} ${floor.name}を見る`}
+              >
+                <span className={s.cardMeta}>
+                  <span className={s.floorTopline}>
+                    <span className={s.floorNum}>{floorId.toUpperCase()}</span>
+                    <span className={s.floorEn}>{caption}</span>
+                    <span className={s.floorRole}>{floor.name}</span>
                   </span>
-                  <MiniScene floorId={floorId} layout={layout} aiCount={aiCount} />
-                </button>
-
-                {/* フロア間の情報フロー（下→上）。装飾。意味は下の .flowNote が担う。 */}
-                {index < FLOOR_ORDER.length - 1 ? (
-                  <div className={s.flow} aria-hidden="true">
-                    <span className={s.flowLine} />
-                    <ArrowUp size={14} />
-                    <span className={s.flowLine} />
-                  </div>
-                ) : null}
-              </div>
+                  <span className={s.floorAction}>{CARD_TEXT[floorId].action}</span>
+                  <span className={s.floorCount}>AI {aiCount}名</span>
+                  {hasHuman ? (
+                    <span className={s.humanLine}>＋ Human 1席（最終判断・承認）</span>
+                  ) : null}
+                  {/* CTA は装飾（button 全体が既に clickable）。nested interactive にしない。 */}
+                  <span className={s.cardCta} aria-hidden="true">
+                    このフロアを見る
+                    <ArrowRight size={13} />
+                  </span>
+                </span>
+                <MiniScene floorId={floorId} layout={layout} aiCount={aiCount} />
+              </button>
             );
           })}
-        </div>
 
-        <p className={s.flowNote}>
-          情報は <b>1F → 2F → 3F</b> へ上がる（実務 → 確認 → 判断・承認）。カードを選ぶと各フロアの詳細に入れます。
-        </p>
+          <p className={s.flowNote}>
+            情報は <b>1F → 2F → 3F</b> へ上がり、最上部の <b>人間の最終判断・承認</b> で確定します
+            （実務 → 確認 → 判断 → 承認）。カードを選ぶと各フロアの詳細に入れます。
+          </p>
+        </div>
       </div>
     </div>
   );
