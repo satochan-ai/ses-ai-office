@@ -208,6 +208,9 @@ export default function ClaudeOfficeV3() {
               onSelect={select}
               activeAgentId={demo.activeAgentId}
               activeStatusText={demo.activeStatusText}
+              previousAgentId={demo.previousAgentId}
+              handoffStepId={demo.currentStep?.id}
+              demoStatus={demo.demoStatus}
               showHumanSeat={showHumanSeat}
               humanSeatVariant={floorView === "3f" ? "executive" : "default"}
               zones={floorLayout?.zones}

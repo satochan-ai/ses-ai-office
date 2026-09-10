@@ -517,6 +517,15 @@
   animation: v3-connector 2.4s linear infinite;
 }
 
+/* Demoの実行経路だけを一度だけ示す矢印。選択時の報告関係(.connectorLine)とは別の意味を持つ。 */
+.demoHandoffArrow {
+  stroke: rgba(208, 161, 74, 0.78);
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+  stroke-linecap: round;
+  animation: v3-demo-handoff 1.2s ease-out both;
+}
+
 /* 人間責任者席専用の詳細パネル。既存の.detailと同じ枠組みだが、縁の色だけを変えて識別できるようにする。 */
 .humanSeatPanel {
   border-color: rgba(226, 184, 119, 0.6);
@@ -1335,6 +1344,12 @@
   to { stroke-dashoffset: -18; }
 }
 
+@keyframes v3-demo-handoff {
+  0% { opacity: 0; stroke-dashoffset: 18; }
+  16%, 76% { opacity: 0.78; }
+  100% { opacity: 0.26; stroke-dashoffset: 0; }
+}
+
 @keyframes v3-demo-ring {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.85; }
@@ -1482,6 +1497,7 @@
   .eye,
   .detail,
   .connectorLine,
+  .demoHandoffArrow,
   .demoActiveRing,
   .humanSeatDemoActive,
   .demoProgressFill {

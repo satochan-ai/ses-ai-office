@@ -37,8 +37,10 @@ export function useOfficeV3ClaudeDemo() {
   const [logs, setLogs] = useState<OfficeV3DemoLog[]>([]);
   const [activeAgentId, setActiveAgentId] = useState<string | null>(null);
   const [activeStatusText, setActiveStatusText] = useState("");
+  const [previousAgentId, setPreviousAgentId] = useState<string | null>(null);
 
   const loggedStepRef = useRef<string | null>(null);
+  const lastActiveAgentIdRef = useRef<string | null>(null);
   const logSeqRef = useRef(0);
   const actionLockRef = useRef(false);
 
@@ -70,6 +72,9 @@ export function useOfficeV3ClaudeDemo() {
     if (!activeStep) return;
 
     if (loggedStepRef.current !== activeStep.id) {
+      const previousAgentId = lastActiveAgentIdRef.current;
+      setPreviousAgentId(previousAgentId !== activeStep.agentId ? previousAgentId : null);
+      lastActiveAgentIdRef.current = activeStep.agentId;
       appendLogs(activeStep.id, activeStep.logs);
       loggedStepRef.current = activeStep.id;
     }
@@ -111,6 +116,7 @@ export function useOfficeV3ClaudeDemo() {
 
   const resetRuntimeState = useCallback(() => {
     loggedStepRef.current = null;
+    lastActiveAgentIdRef.current = null;
     logSeqRef.current = 0;
     actionLockRef.current = false;
     setLogs([]);
@@ -120,6 +126,7 @@ export function useOfficeV3ClaudeDemo() {
     setApprovalLocked(false);
     setActiveAgentId(null);
     setActiveStatusText("");
+    setPreviousAgentId(null);
   }, []);
 
   // シナリオ変更可能なのは idle / completed のときだけ。切り替えたら前シナリオの状態は残さない。
@@ -189,6 +196,7 @@ export function useOfficeV3ClaudeDemo() {
     progressPercent,
     activeAgentId: demoStatus === "idle" ? null : activeAgentId,
     activeStatusText,
+    previousAgentId: demoStatus === "idle" ? null : previousAgentId,
     logs,
     isRejectionFlow: rejectionIndex >= 0,
     startDemo,

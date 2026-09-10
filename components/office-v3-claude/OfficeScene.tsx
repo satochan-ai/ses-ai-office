@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   GRID_SIZE,
   HUMAN_SEAT_ID,
@@ -18,6 +18,7 @@ import {
   v3Zones,
 } from "@/data/officeV3ClaudeLayout";
 import type { V3AgentView, V3Area, V3AreaId, V3HumanSeat } from "@/types/officeV3Claude";
+import type { OfficeV3DemoStatus } from "@/types/officeV3ClaudeDemo";
 import HumanSeat from "./HumanSeat";
 import OfficeAgent from "./OfficeAgent";
 import OfficeFurniture from "./OfficeFurniture";
@@ -137,6 +138,11 @@ type Props = {
   /** デモ進行中に現在処理中のagentId（またはHUMAN_SEAT_ID）。selectedIdとは独立して扱う。 */
   activeAgentId?: string | null;
   activeStatusText?: string;
+  /** 現在のDemo Stepへ渡す直前の担当。引き継ぎ矢印だけに使い、selectedIdとは混ぜない。 */
+  previousAgentId?: string | null;
+  /** 同じactorの組み合わせが再登場しても、Stepごとに短時間表示を再開するための既存Step ID。 */
+  handoffStepId?: string;
+  demoStatus?: OfficeV3DemoStatus;
   /** 人間責任者席を描くか。フロア表示が "all" / "3f" のときだけ true（Step3）。既定は表示。 */
   showHumanSeat?: boolean;
   /** Step4: フロア別レイアウトデータ。未指定なら現行の base レイアウト（＝all 互換）を使う。 */
@@ -154,8 +160,54 @@ type Props = {
   floorTint?: string;
 };
 
+type ActorPoint = {
+  id: string;
+  gx: number;
+  gy: number;
+  area: V3AreaId | null;
+};
+
+type HandoffLine = {
+  id: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
+/**
+ * Demoの実行経路だけを示す短時間の矢印。既存のselected connection lineとは責務を分ける。
+ * 表示終了はReact側で行い、reduced motionでもHuman承認待ち中に矢印が残り続けないようにする。
+ */
+function DemoHandoffArrow({ line }: { line: HandoffLine }) {
+  const [visible, setVisible] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setVisible(false), 1200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (!visible) return null;
+
+  const controlX = (line.x1 + line.x2) / 2;
+  const controlY = Math.min(line.y1, line.y2) - 48;
+
+  return (
+    <g aria-hidden="true" pointerEvents="none">
+      <path
+        d={`M${line.x1},${line.y1} Q${controlX},${controlY} ${line.x2},${line.y2}`}
+        className={s.demoHandoffArrow}
+        fill="none"
+        markerEnd="url(#v3DemoHandoffArrowhead)"
+        vectorEffect="non-scaling-stroke"
+      />
+    </g>
+  );
+}
+
 export default function OfficeScene({
-  views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText, showHumanSeat = true,
+  views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText, previousAgentId = null,
+  handoffStepId, demoStatus = "idle", showHumanSeat = true,
   zones = v3Zones, corridors = v3Corridors, furniture = v3Furniture, viewBox = VIEWBOX,
   humanSeat = v3HumanSeat, humanSeatVariant = "default", areas, floorTint,
 }: Props) {
@@ -205,6 +257,45 @@ export default function OfficeScene({
   }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture, humanSeat, humanSeatVariant]);
 
   const activeZones = new Set(zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
+
+  const actorPoints = useMemo(() => {
+    const areaOf = (gx: number, gy: number) =>
+      zones.find(zone => gx >= zone.bounds.gx0 && gx <= zone.bounds.gx1 && gy >= zone.bounds.gy0 && gy <= zone.bounds.gy1)?.area ?? null;
+
+    return new Map<string, ActorPoint>([
+      ...views.map(view => ({
+        id: view.placement.agentId,
+        gx: view.placement.gx,
+        gy: view.placement.gy,
+        area: areaOf(view.placement.gx, view.placement.gy),
+      })),
+      {
+        id: humanSeat.id,
+        gx: humanSeat.gx,
+        gy: humanSeat.gy,
+        area: areaOf(humanSeat.gx, humanSeat.gy),
+      },
+    ].map(point => [point.id, point]));
+  }, [views, humanSeat, zones]);
+
+  const demoHandoff = useMemo<HandoffLine | null>(() => {
+    if (!handoffStepId || demoStatus === "idle" || demoStatus === "completed" || !previousAgentId || !activeAgentId || previousAgentId === activeAgentId) {
+      return null;
+    }
+
+    const previous = actorPoints.get(previousAgentId);
+    const current = actorPoints.get(activeAgentId);
+    if (!previous || !current) return null;
+    if (area !== "all" && (previous.area !== area || current.area !== area)) return null;
+
+    return {
+      id: `${handoffStepId}:${previous.id}->${current.id}`,
+      x1: isoX(previous.gx, previous.gy),
+      y1: isoY(previous.gx, previous.gy) - 42,
+      x2: isoX(current.gx, current.gy),
+      y2: isoY(current.gx, current.gy) - 42,
+    };
+  }, [activeAgentId, actorPoints, area, demoStatus, handoffStepId, previousAgentId]);
 
   // 3層構造の報告関係を、選択時だけ淡い線でつなぐ（常時は表示しない）。
   const connectorLines = useMemo(() => {
@@ -258,6 +349,9 @@ export default function OfficeScene({
           <stop offset="0%" stopColor="#fff4dc" stopOpacity="0.55" />
           <stop offset="100%" stopColor="#fff4dc" stopOpacity="0" />
         </radialGradient>
+        <marker id="v3DemoHandoffArrowhead" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
+          <path d="M0,0 L8,4 L0,8 Z" fill="#d0a14a" />
+        </marker>
       </defs>
 
       <g className={s.camera} style={{ transform: camera }}>
@@ -287,6 +381,8 @@ export default function OfficeScene({
         {props.map(item => (
           <g key={item.key}>{item.node}</g>
         ))}
+
+        {demoHandoff ? <DemoHandoffArrow key={demoHandoff.id} line={demoHandoff} /> : null}
 
         {/* 報告・承認フローの連携線。選択時だけ淡く表示し、常時は表示しない。 */}
         {connectorLines.length > 0 ? (
