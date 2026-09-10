@@ -1345,20 +1345,27 @@
 /* 選択リング(.agentRing)とは別に、デモ進行中の担当だけへ淡い輪を追加する */
 .demoActiveRing {
   fill: none;
-  stroke: #e2b877;
-  stroke-width: 3;
-  stroke-dasharray: 5 5;
+  stroke: #f3cb70;
+  stroke-width: 5;
+  stroke-dasharray: 8 5;
+  filter: drop-shadow(0 0 4px rgba(243, 203, 112, 0.72));
   animation: v3-demo-ring 1.8s ease-in-out infinite;
 }
 
 .demoActiveBadge rect {
-  fill: rgba(226, 184, 119, 0.92);
+  fill: rgba(245, 208, 126, 0.98);
+  stroke: rgba(255, 246, 218, 0.94);
+  stroke-width: 2;
+  filter: drop-shadow(0 2px 3px rgba(20, 24, 34, 0.42));
 }
 
 .demoActiveText {
   fill: #241d0f;
   font-size: var(--v3-status);
   font-weight: 700;
+  paint-order: stroke;
+  stroke: rgba(255, 246, 218, 0.28);
+  stroke-width: 0.5;
 }
 
 /* ---------------- レスポンシブ ---------------- */
