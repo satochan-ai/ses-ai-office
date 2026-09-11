@@ -59,8 +59,13 @@ const taskGroups = [
   { title: "確認待ち", tone: "waiting", ids: [2] }, { title: "AI処理中", tone: "running", ids: [5] },
 ];
 
-function PriorityTasks({ onSelect, taskItems, demoCompleted }: { onSelect: (task: PriorityTask) => void; taskItems: PriorityTask[]; demoCompleted: boolean }) {
-  const groups = taskGroups.map(group => group.title === "今すぐ対応" && demoCompleted ? { ...group, ids: [7, ...group.ids] } : group);
+function PriorityTasks({ onSelect, taskItems, demoCompleted, v3TaskId }: { onSelect: (task: PriorityTask) => void; taskItems: PriorityTask[]; demoCompleted: boolean; v3TaskId?: number | null }) {
+  const groups = taskGroups.map(group => {
+    if (group.title === "今すぐ対応" && demoCompleted) return { ...group, ids: [7, ...group.ids] };
+    // V3「案件と人材のマッチング」完了後の人間の次アクションは、承認・処理が済んだ確認事項として「確認待ち」へ追加する。
+    if (group.title === "確認待ち" && v3TaskId != null) return { ...group, ids: [v3TaskId, ...group.ids] };
+    return group;
+  });
   return <Panel title="今日の優先タスク" subtitle="売上インパクトと期限から、今見るべき6件に絞りました" action={<button className="text-button">すべて見る <ArrowRight size={15} /></button>}>
     <div className="task-board">{groups.map(group => <div className={`task-column task-column-${group.tone}`} key={group.title}><div className="task-column-head"><span className="column-dot" /><strong>{group.title}</strong><em>{group.ids.length}</em></div>
       {group.ids.map(id => { const task = taskItems.find(t => t.id === id)!; return <button className="task-card" key={id} onClick={() => onSelect(task)}><div><strong>{task.title}</strong><StatusBadge tone={task.priority === "高" ? "red" : task.priority === "中" ? "orange" : "gray"}>{task.priority}</StatusBadge></div><p><Bot size={13} />{task.agent}</p><footer><span><Clock3 size={12} />{task.deadline}</span><span className={task.status === "進行中" ? "is-working" : ""}>{task.status}</span></footer></button>; })}
@@ -139,6 +144,13 @@ export default function Dashboard() {
   useEffect(() => { try { const raw = sessionStorage.getItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); if (!raw) return; const result: unknown = JSON.parse(raw); if (isOfficeV3DemoResult(result)) setV3DemoResult(result); } catch { /* V3のタブ内モック結果を読めなくてもDashboardは通常表示する。 */ } }, []);
   const displayedSummaries = summaries.map(item => item.label === "新着案件" && demoResult ? { ...item, value: item.value + demoResult.newJobs, note: "デモ案件 +1" } : item.label === "提案中" && demoResult ? { ...item, value: item.value + demoResult.proposals, note: "提案準備完了 +1" } : item);
   const displayedTasks: PriorityTask[] = demoResult ? [{ id: 7, title: demoResult.priorityTasks?.[0] ?? "Java案件の提案送付", agent: demoResult.scenarioId === "contract-risk" ? "AIフォロー担当" : demoResult.scenarioId === "lost-knowledge" ? "AI分析担当" : "AI営業Mgr", priority: "高", deadline: "今すぐ", status: "未着手", category: demoResult.scenarioId === "contract-risk" ? "契約" : demoResult.scenarioId === "lost-knowledge" ? "分析" : "提案" }, ...tasks] : tasks;
+  // Step17-F: V3「案件と人材のマッチング」完了結果（承認済み）から、人間の次アクションを1件だけ導出する。
+  // 新しいstorageは作らず、既存のv3DemoResult（ses-ai-office-v3-demo-result）だけを正本とする。
+  // 「提案準備完了」＝AIの準備が終わった状態であり、外部へは未送信のため、文言は「準備する」に留める。
+  const v3FollowUpTask: PriorityTask | null = v3DemoResult && v3DemoResult.scenarioId === "matching-proposal"
+    ? { id: 8, title: "マッチング結果を確認し、顧客への提案を準備する", agent: "AI営業Mgr", priority: "高", deadline: "要確認", status: "確認待ち", category: "提案" }
+    : null;
+  const displayedTasksWithV3 = v3FollowUpTask ? [v3FollowUpTask, ...displayedTasks] : displayedTasks;
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
   const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3DemoResult(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
   const displayedLogs: ActivityType[] = v3DemoResult ? [{ time: formatDemoTime(v3DemoResult.completedAt), agent: v3DemoResult.finalAgentName, action: `${v3DemoResult.resultTitle}（V3 Demo・Mock）`, status: "完了" }, ...logs] : logs;
@@ -150,7 +162,7 @@ export default function Dashboard() {
     {demoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>{demoResult.scenarioTitle ?? "Java案件の提案準備が完了"}</strong> {demoResult.dashboardSummary ?? "新着案件 +1 ・ 提案候補 +3 ・ 提案中 +1"}</span></div><button onClick={resetDemo}>デモ結果をリセット</button></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
     <div className="mini-summary"><div><span>採用選考中</span><strong>{today.recruit}<small>件</small></strong><em>書類選考 18件</em></div><div><span>稼働中要員</span><strong>{today.active}<small>名</small></strong><em>更新確認 12名</em></div><div className="attention"><span>要確認アラート</span><strong>7<small>件</small></strong><em>期限超過・停滞</em></div></div>
-    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasks} demoCompleted={Boolean(demoResult)} /><FunnelAndProspects /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard />
+    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskId={v3FollowUpTask?.id ?? null} /><FunnelAndProspects /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard />
     <ActivityLog logs={displayedLogs} onClearV3Result={v3DemoResult ? clearV3DemoResult : undefined} /><CommandPanel onExecute={execute} running={running} /><footer>SES AI Office Dashboard <span>•</span> モックデータ最終更新 18:30</footer>
   </main>{selected && <AgentModal agent={selected} onClose={() => setSelected(null)} />}{selectedTask && <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />}{toast && <div className="toast" role="status"><Check size={17} />{toast}</div>}</div>;
 }
