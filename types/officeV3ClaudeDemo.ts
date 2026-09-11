@@ -27,6 +27,20 @@ export type OfficeV3DemoLog = {
   createdAt: number;
 };
 
+/** Claude版V3の完了結果をDashboardへ渡すための、タブ内限定のモック結果。 */
+export type OfficeV3DemoResult = {
+  version: 1;
+  source: "office-v3-claude";
+  mock: true;
+  scenarioId: string;
+  scenarioTitle: string;
+  completedAt: string;
+  finalAgentId: string;
+  finalAgentName: string;
+  resultTitle: string;
+  resultSummary: string;
+};
+
 /** ラベル・値の1行（対象データの概要、承認時の指標などで共通利用する）。 */
 export type OfficeV3DemoMetric = {
   label: string;

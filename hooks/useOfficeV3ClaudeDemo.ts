@@ -1,16 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { officeV3ClaudeDemoScenarios } from "@/data/officeV3ClaudeDemo";
+import { officeAgents } from "@/data/office";
+import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY, officeV3ClaudeDemoScenarios } from "@/data/officeV3ClaudeDemo";
 import type {
   OfficeV3ApprovalState,
   OfficeV3DemoLog,
+  OfficeV3DemoResult,
   OfficeV3DemoScenario,
   OfficeV3DemoStatus,
   OfficeV3DemoStep,
 } from "@/types/officeV3ClaudeDemo";
 
 const DEFAULT_SCENARIO_ID = officeV3ClaudeDemoScenarios[0].id;
+const MATCHING_SCENARIO_ID = "matching-proposal";
 
 /**
  * Claude版V3専用の固定デモ（5シナリオ）進行フック。デモ状態の唯一の管理元。
@@ -43,6 +46,8 @@ export function useOfficeV3ClaudeDemo() {
   const lastActiveAgentIdRef = useRef<string | null>(null);
   const logSeqRef = useRef(0);
   const actionLockRef = useRef(false);
+  // Strict Modeのeffect再実行でも、同じ完了結果を二重保存しない。
+  const completionStoredRef = useRef(false);
 
   const selectedScenario: OfficeV3DemoScenario = useMemo(
     () => officeV3ClaudeDemoScenarios.find(scenario => scenario.id === selectedScenarioId) ?? officeV3ClaudeDemoScenarios[0],
@@ -66,6 +71,37 @@ export function useOfficeV3ClaudeDemo() {
     if (currentStepIndex >= 0 && currentStepIndex < steps.length) return steps[currentStepIndex];
     return null;
   }, [currentStepIndex, rejectionIndex, steps, rejectionSteps]);
+
+  const storeCompletedMatchingResult = useCallback(() => {
+    const finalStep = steps[steps.length - 1];
+    if (
+      completionStoredRef.current ||
+      selectedScenario.id !== MATCHING_SCENARIO_ID ||
+      approvalState !== "approved" ||
+      !finalStep
+    ) return;
+
+    const finalAgentName = officeAgents.find(agent => agent.id === finalStep.agentId)?.name ?? finalStep.agentId;
+    const result: OfficeV3DemoResult = {
+      version: 1,
+      source: "office-v3-claude",
+      mock: true,
+      scenarioId: selectedScenario.id,
+      scenarioTitle: selectedScenario.title,
+      completedAt: new Date().toISOString(),
+      finalAgentId: finalStep.agentId,
+      finalAgentName,
+      resultTitle: "案件と人材のマッチング完了",
+      resultSummary: "Human承認済み。提案準備が完了しました。",
+    };
+
+    try {
+      sessionStorage.setItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY, JSON.stringify(result));
+      completionStoredRef.current = true;
+    } catch {
+      // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
+    }
+  }, [approvalState, selectedScenario, steps]);
 
   // アクティブなステップが変わるたびに、ログ追加＋状態表示の更新＋（必要なら）次ステップへのタイマーを1本張る。
   useEffect(() => {
@@ -105,6 +141,7 @@ export function useOfficeV3ClaudeDemo() {
         if (nextIdx < steps.length) {
           setCurrentStepIndex(nextIdx);
         } else {
+          storeCompletedMatchingResult();
           setDemoStatus("completed");
         }
       }
@@ -112,7 +149,7 @@ export function useOfficeV3ClaudeDemo() {
 
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, appendLogs]);
+  }, [activeStep, appendLogs, storeCompletedMatchingResult]);
 
   const resetRuntimeState = useCallback(() => {
     loggedStepRef.current = null;
@@ -138,6 +175,7 @@ export function useOfficeV3ClaudeDemo() {
   }, [demoStatus, resetRuntimeState]);
 
   const startDemo = useCallback(() => {
+    completionStoredRef.current = false;
     resetRuntimeState();
     setDemoStatus("running");
     setCurrentStepIndex(0);

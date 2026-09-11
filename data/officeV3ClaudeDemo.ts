@@ -1,6 +1,9 @@
 import { HUMAN_SEAT_ID } from "@/data/officeV3ClaudeLayout";
 import type { OfficeV3DemoScenario } from "@/types/officeV3ClaudeDemo";
 
+/** 旧Officeの結果キーとは分離し、Claude版V3の最新完了結果だけを保持する。 */
+export const OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY = "ses-ai-office-v3-demo-result";
+
 /**
  * Claude版V3専用の固定デモシナリオ（5本）。すべてモックデータであり、実案件・実在の
  * 個人情報は含まない（田中一郎・山田太郎は説明のための架空人物）。
