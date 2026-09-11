@@ -33,7 +33,7 @@ export type OfficeV3DemoLog = {
  * スキーマが変わるため version は 2 とする（旧 version:1 の値は型ガードで自然に無効化され、
  * Dashboardは通常表示にフォールバックする。sessionStorageのみの一時データのため移行処理は行わない）。
  */
-export type OfficeV3DemoResult = {
+export type OfficeV3DemoResultBase = {
   version: 2;
   source: "office-v3-claude";
   mock: true;
@@ -44,10 +44,17 @@ export type OfficeV3DemoResult = {
   finalAgentName: string;
   resultTitle: string;
   resultSummary: string;
+};
+
+export type MatchingDemoResult = OfficeV3DemoResultBase & {
+  scenarioId: "matching-proposal";
   /** V3 Demo内の案件識別子（mock）。CRM ID・本番DB ID・顧客IDではない。Pipeline「提案準備」card導出にのみ使う。 */
   opportunityId: string;
   opportunityTitle: string;
 };
+
+/** 現在Dashboard連携する完了結果はmatchingシナリオのみ。 */
+export type OfficeV3DemoResult = MatchingDemoResult;
 
 /** ラベル・値の1行（対象データの概要、承認時の指標などで共通利用する）。 */
 export type OfficeV3DemoMetric = {

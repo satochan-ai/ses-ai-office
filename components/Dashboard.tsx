@@ -12,6 +12,8 @@ import {
   agents, attentionItems, funnels, initialActivities, pipelineColumns, prospects, summaries, tasks,
 } from "@/data/mockData";
 import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY } from "@/data/officeV3ClaudeDemo";
+import { projectV3DemoResultToDashboard, type PipelineCard } from "@/lib/officeV3DashboardProjection";
+import { isMatchingDemoResult } from "@/lib/officeV3DemoResult";
 import type { Activity as ActivityType, Agent as AgentType, PriorityTask, Tone } from "@/types";
 import type { DemoStoredResult } from "@/types/demo";
 import type { OfficeV3DemoResult } from "@/types/officeV3ClaudeDemo";
@@ -96,13 +98,6 @@ function AttentionCards() {
   return <Panel title="要注意顧客・BP" subtitle="フォロー漏れと次の商機をAIが整理" action={<button className="text-button">顧客・BP管理を開く <ArrowRight size={15} /></button>}><div className="attention-grid">{attentionItems.map(item => <article className={`attention-card attention-${item.kind}`} key={item.label}><header>{item.kind === "chance" ? <TrendingUp size={17} /> : <AlertTriangle size={17} />}<span>{item.label}</span><strong>{item.count}<small>件</small></strong></header><div>{item.companies.map(name => <span key={name}>{name}</span>)}</div></article>)}</div></Panel>;
 }
 
-/**
- * Step18-B: 既存 pipelineColumns（固定mock）の暗黙の型に、V3由来cardを合流させるための最小型。
- * candidates は既存mock cardでは常に付くが、V3 cardには候補者数を持たせないため optional にする
- * （Pipeline表示都合でV3 result contractへ候補者数を追加しないため）。
- */
-type PipelineCard = { opportunityId?: string; title: string; candidates?: number; next: string; agent: string; updated: string };
-
 function PipelineBoard({ v3Card }: { v3Card?: PipelineCard | null }) {
   return <Panel title="案件・要員・採用進捗" subtitle="各ステージの代表案件だけを表示" action={<button className="text-button">進捗管理を開く <ArrowRight size={15} /></button>}><div className="pipeline-board">{pipelineColumns.map((column, i) => {
     // V3 cardは「提案準備」列だけに追加する。既存cardの移動・上書き・名前照合は行わない。
@@ -113,23 +108,6 @@ function PipelineBoard({ v3Card }: { v3Card?: PipelineCard | null }) {
 
 function ActivityLog({ logs, onClearV3Result }: { logs: ActivityType[]; onClearV3Result?: () => void }) {
   return <Panel title="AI実行ログ" subtitle="最新5件" action={onClearV3Result ? <button className="text-button" onClick={onClearV3Result}>V3デモ結果をクリア</button> : <button className="text-button">すべてのログを見る <ArrowRight size={15} /></button>}><div className="timeline log-compact">{logs.slice(0, 5).map((log, i) => <div className="log" key={`${log.time}-${i}`}><span className={`log-dot ${log.status === "処理中" ? "running" : ""}`}>{log.status === "完了" ? <Check size={11} /> : <Activity size={11} />}</span><time>{log.time}</time><div><strong>{log.agent}</strong><p>{log.action}</p></div><StatusBadge tone={log.status === "完了" ? "green" : "blue"}>{log.status}</StatusBadge></div>)}</div></Panel>;
-}
-
-function isOfficeV3DemoResult(value: unknown): value is OfficeV3DemoResult {
-  if (!value || typeof value !== "object") return false;
-  const result = value as Record<string, unknown>;
-  // Step18-B: schema拡張（opportunityId/opportunityTitle追加）に伴い version 2 のみを正とする。
-  // 旧 version:1 の値はここで弾かれ、Dashboardは通常表示にフォールバックする（移行処理はしない）。
-  return result.version === 2 && result.source === "office-v3-claude" && result.mock === true &&
-    result.scenarioId === "matching-proposal" &&
-    ["scenarioTitle", "completedAt", "finalAgentId", "finalAgentName", "resultTitle", "resultSummary", "opportunityId", "opportunityTitle"]
-      .every(key => typeof result[key] === "string" && (result[key] as string).length > 0);
-}
-
-function formatDemoTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "--:--";
-  return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 }
 
 function CommandPanel({ onExecute, running }: { onExecute: (text: string, agent: string) => void; running: boolean }) {
@@ -155,24 +133,16 @@ export default function Dashboard() {
   const executeTimer = useRef<number | null>(null);
   const today = useMemo(() => ({ recruit: 36, active: 128 }), []);
   useEffect(() => { const raw = sessionStorage.getItem(DEMO_STORAGE_KEY); if (!raw) return; try { const result = JSON.parse(raw) as DemoStoredResult; setDemoResult(result); setLogs([...result.logs].reverse().map((action, index) => ({ time: `18:${Math.max(0, 30 - index).toString().padStart(2, "0")}`, agent: action.includes("契約") || action.includes("勤務表") ? "AI契約・請求管理担当" : action.includes("ナレッジ") || action.includes("改善") ? "AI教育・ナレッジ担当" : action.includes("面談") ? "AI提案・面談支援担当" : action.includes("マッチング") || action.includes("候補") ? "AIマッチング担当" : action.includes("分析") || action.includes("失注") ? "AI分析担当" : "AI営業Mgr", action, status: "完了" as const }))); } catch { sessionStorage.removeItem(DEMO_STORAGE_KEY); } }, []);
-  useEffect(() => { try { const raw = sessionStorage.getItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); if (!raw) return; const result: unknown = JSON.parse(raw); if (isOfficeV3DemoResult(result)) setV3DemoResult(result); } catch { /* V3のタブ内モック結果を読めなくてもDashboardは通常表示する。 */ } }, []);
+  useEffect(() => { try { const raw = sessionStorage.getItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); if (!raw) return; const result: unknown = JSON.parse(raw); if (isMatchingDemoResult(result)) setV3DemoResult(result); } catch { /* V3のタブ内モック結果を読めなくてもDashboardは通常表示する。 */ } }, []);
   const displayedSummaries = summaries.map(item => item.label === "新着案件" && demoResult ? { ...item, value: item.value + demoResult.newJobs, note: "デモ案件 +1" } : item.label === "提案中" && demoResult ? { ...item, value: item.value + demoResult.proposals, note: "提案準備完了 +1" } : item);
   const displayedTasks: PriorityTask[] = demoResult ? [{ id: 7, title: demoResult.priorityTasks?.[0] ?? "Java案件の提案送付", agent: demoResult.scenarioId === "contract-risk" ? "AIフォロー担当" : demoResult.scenarioId === "lost-knowledge" ? "AI分析担当" : "AI営業Mgr", priority: "高", deadline: "今すぐ", status: "未着手", category: demoResult.scenarioId === "contract-risk" ? "契約" : demoResult.scenarioId === "lost-knowledge" ? "分析" : "提案" }, ...tasks] : tasks;
-  // Step17-F: V3「案件と人材のマッチング」完了結果（承認済み）から、人間の次アクションを1件だけ導出する。
-  // 新しいstorageは作らず、既存のv3DemoResult（ses-ai-office-v3-demo-result）だけを正本とする。
-  // 「提案準備完了」＝AIの準備が終わった状態であり、外部へは未送信のため、文言は「準備する」に留める。
-  const v3FollowUpTask: PriorityTask | null = v3DemoResult && v3DemoResult.scenarioId === "matching-proposal"
-    ? { id: 8, title: "マッチング結果を確認し、顧客への提案を準備する", agent: "AI営業Mgr", priority: "高", deadline: "要確認", status: "確認待ち", category: "提案" }
-    : null;
+  const v3Projection = v3DemoResult ? projectV3DemoResultToDashboard(v3DemoResult) : null;
+  const v3FollowUpTask = v3Projection?.task ?? null;
   const displayedTasksWithV3 = v3FollowUpTask ? [v3FollowUpTask, ...displayedTasks] : displayedTasks;
-  // Step18-B: 同じv3DemoResultから、Pipeline「提案準備」列向けのV3専用cardも1件だけ導出する（AIログ・優先タスクと同じ正本）。
-  // 案件名はDashboard側で推測せず、scenario由来のopportunityTitleをそのまま使う。
-  const v3PipelineCard: PipelineCard | null = v3DemoResult && v3DemoResult.scenarioId === "matching-proposal"
-    ? { opportunityId: v3DemoResult.opportunityId, title: v3DemoResult.opportunityTitle, next: "顧客への提案を準備", agent: "AI営業Mgr", updated: formatDemoTime(v3DemoResult.completedAt) }
-    : null;
+  const v3PipelineCard = v3Projection?.pipelineCard ?? null;
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
   const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3DemoResult(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
-  const displayedLogs: ActivityType[] = v3DemoResult ? [{ time: formatDemoTime(v3DemoResult.completedAt), agent: v3DemoResult.finalAgentName, action: `${v3DemoResult.resultTitle}（V3 Demo・Mock）`, status: "完了" }, ...logs] : logs;
+  const displayedLogs: ActivityType[] = v3Projection ? [v3Projection.log, ...logs] : logs;
   const execute = (text: string, agent: string) => { if (executeTimer.current !== null) window.clearTimeout(executeTimer.current); setRunning(true); setToast("AI社員に指示を送信しました"); setLogs(prev => [{ time: "18:30", agent, action: `一括指示を受付：${text.slice(0, 22)}…`, status: "処理中" }, ...prev]); executeTimer.current = window.setTimeout(() => { setRunning(false); setToast("優先アクションの整理が完了しました"); setLogs(prev => prev.map((l, i) => i === 0 ? { ...l, status: "完了" } : l)); executeTimer.current = null; }, 1600); };
   useEffect(() => () => { if (executeTimer.current !== null) window.clearTimeout(executeTimer.current); }, []);
   useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(""), 3000); return () => window.clearTimeout(id); }, [toast]);
