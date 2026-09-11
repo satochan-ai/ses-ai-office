@@ -27,9 +27,14 @@ export type OfficeV3DemoLog = {
   createdAt: number;
 };
 
-/** Claude版V3の完了結果をDashboardへ渡すための、タブ内限定のモック結果。 */
+/**
+ * Claude版V3の完了結果をDashboardへ渡すための、タブ内限定のモック結果。
+ * Step18-B: Dashboard Pipeline「提案準備」card導出のため opportunityId / opportunityTitle を追加。
+ * スキーマが変わるため version は 2 とする（旧 version:1 の値は型ガードで自然に無効化され、
+ * Dashboardは通常表示にフォールバックする。sessionStorageのみの一時データのため移行処理は行わない）。
+ */
 export type OfficeV3DemoResult = {
-  version: 1;
+  version: 2;
   source: "office-v3-claude";
   mock: true;
   scenarioId: string;
@@ -39,6 +44,9 @@ export type OfficeV3DemoResult = {
   finalAgentName: string;
   resultTitle: string;
   resultSummary: string;
+  /** V3 Demo内の案件識別子（mock）。CRM ID・本番DB ID・顧客IDではない。Pipeline「提案準備」card導出にのみ使う。 */
+  opportunityId: string;
+  opportunityTitle: string;
 };
 
 /** ラベル・値の1行（対象データの概要、承認時の指標などで共通利用する）。 */
@@ -65,6 +73,11 @@ export type OfficeV3DemoScenario = {
   subjectSummary: string;
   /** 対象データの概要（モックデータのみ、実在情報は含まない）。 */
   subjectDetails: OfficeV3DemoMetric[];
+  /**
+   * Step18-B: Dashboard Pipeline「提案準備」card導出用のmock案件識別子。
+   * 対応するシナリオ（現状は案件と人材のマッチングのみ）だけが持つ。CRM・本番DBのIDではない。
+   */
+  opportunity?: { opportunityId: string; title: string };
   /** 通常進行フロー（最後から2番目のステップで人間承認待ちに入る）。 */
   steps: OfficeV3DemoStep[];
   /** 人間責任者が差し戻した場合だけ再生される簡易フロー。完了後は自動的に承認待ちへ戻る。 */

@@ -96,8 +96,19 @@ function AttentionCards() {
   return <Panel title="要注意顧客・BP" subtitle="フォロー漏れと次の商機をAIが整理" action={<button className="text-button">顧客・BP管理を開く <ArrowRight size={15} /></button>}><div className="attention-grid">{attentionItems.map(item => <article className={`attention-card attention-${item.kind}`} key={item.label}><header>{item.kind === "chance" ? <TrendingUp size={17} /> : <AlertTriangle size={17} />}<span>{item.label}</span><strong>{item.count}<small>件</small></strong></header><div>{item.companies.map(name => <span key={name}>{name}</span>)}</div></article>)}</div></Panel>;
 }
 
-function PipelineBoard() {
-  return <Panel title="案件・要員・採用進捗" subtitle="各ステージの代表案件だけを表示" action={<button className="text-button">進捗管理を開く <ArrowRight size={15} /></button>}><div className="pipeline-board">{pipelineColumns.map((column, i) => <div className="pipeline-column" key={column.stage}><header><span>{column.stage}</span><em>{column.items.length}</em></header>{column.items.map(item => <article key={item.title}><div><strong>{item.title}</strong><span>{item.candidates}名</span></div><p>{item.next}</p><footer><span><Bot size={12} />{item.agent}</span><time>{item.updated}</time></footer></article>)}{column.items.length === 1 && i < 5 && <div className="empty-slot">次の進捗を待機中</div>}</div>)}</div></Panel>;
+/**
+ * Step18-B: 既存 pipelineColumns（固定mock）の暗黙の型に、V3由来cardを合流させるための最小型。
+ * candidates は既存mock cardでは常に付くが、V3 cardには候補者数を持たせないため optional にする
+ * （Pipeline表示都合でV3 result contractへ候補者数を追加しないため）。
+ */
+type PipelineCard = { opportunityId?: string; title: string; candidates?: number; next: string; agent: string; updated: string };
+
+function PipelineBoard({ v3Card }: { v3Card?: PipelineCard | null }) {
+  return <Panel title="案件・要員・採用進捗" subtitle="各ステージの代表案件だけを表示" action={<button className="text-button">進捗管理を開く <ArrowRight size={15} /></button>}><div className="pipeline-board">{pipelineColumns.map((column, i) => {
+    // V3 cardは「提案準備」列だけに追加する。既存cardの移動・上書き・名前照合は行わない。
+    const items: PipelineCard[] = column.stage === "提案準備" && v3Card ? [v3Card, ...column.items] : column.items;
+    return <div className="pipeline-column" key={column.stage}><header><span>{column.stage}</span><em>{items.length}</em></header>{items.map(item => <article key={item.opportunityId ?? item.title}><div><strong>{item.title}</strong>{item.candidates != null ? <span>{item.candidates}名</span> : null}</div><p>{item.next}</p><footer><span><Bot size={12} />{item.agent}</span><time>{item.updated}</time></footer></article>)}{items.length === 1 && i < 5 && <div className="empty-slot">次の進捗を待機中</div>}</div>;
+  })}</div></Panel>;
 }
 
 function ActivityLog({ logs, onClearV3Result }: { logs: ActivityType[]; onClearV3Result?: () => void }) {
@@ -107,9 +118,12 @@ function ActivityLog({ logs, onClearV3Result }: { logs: ActivityType[]; onClearV
 function isOfficeV3DemoResult(value: unknown): value is OfficeV3DemoResult {
   if (!value || typeof value !== "object") return false;
   const result = value as Record<string, unknown>;
-  return result.version === 1 && result.source === "office-v3-claude" && result.mock === true &&
+  // Step18-B: schema拡張（opportunityId/opportunityTitle追加）に伴い version 2 のみを正とする。
+  // 旧 version:1 の値はここで弾かれ、Dashboardは通常表示にフォールバックする（移行処理はしない）。
+  return result.version === 2 && result.source === "office-v3-claude" && result.mock === true &&
     result.scenarioId === "matching-proposal" &&
-    ["scenarioTitle", "completedAt", "finalAgentId", "finalAgentName", "resultTitle", "resultSummary"].every(key => typeof result[key] === "string");
+    ["scenarioTitle", "completedAt", "finalAgentId", "finalAgentName", "resultTitle", "resultSummary", "opportunityId", "opportunityTitle"]
+      .every(key => typeof result[key] === "string" && (result[key] as string).length > 0);
 }
 
 function formatDemoTime(value: string) {
@@ -151,6 +165,11 @@ export default function Dashboard() {
     ? { id: 8, title: "マッチング結果を確認し、顧客への提案を準備する", agent: "AI営業Mgr", priority: "高", deadline: "要確認", status: "確認待ち", category: "提案" }
     : null;
   const displayedTasksWithV3 = v3FollowUpTask ? [v3FollowUpTask, ...displayedTasks] : displayedTasks;
+  // Step18-B: 同じv3DemoResultから、Pipeline「提案準備」列向けのV3専用cardも1件だけ導出する（AIログ・優先タスクと同じ正本）。
+  // 案件名はDashboard側で推測せず、scenario由来のopportunityTitleをそのまま使う。
+  const v3PipelineCard: PipelineCard | null = v3DemoResult && v3DemoResult.scenarioId === "matching-proposal"
+    ? { opportunityId: v3DemoResult.opportunityId, title: v3DemoResult.opportunityTitle, next: "顧客への提案を準備", agent: "AI営業Mgr", updated: formatDemoTime(v3DemoResult.completedAt) }
+    : null;
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
   const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3DemoResult(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
   const displayedLogs: ActivityType[] = v3DemoResult ? [{ time: formatDemoTime(v3DemoResult.completedAt), agent: v3DemoResult.finalAgentName, action: `${v3DemoResult.resultTitle}（V3 Demo・Mock）`, status: "完了" }, ...logs] : logs;
@@ -162,7 +181,7 @@ export default function Dashboard() {
     {demoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>{demoResult.scenarioTitle ?? "Java案件の提案準備が完了"}</strong> {demoResult.dashboardSummary ?? "新着案件 +1 ・ 提案候補 +3 ・ 提案中 +1"}</span></div><button onClick={resetDemo}>デモ結果をリセット</button></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
     <div className="mini-summary"><div><span>採用選考中</span><strong>{today.recruit}<small>件</small></strong><em>書類選考 18件</em></div><div><span>稼働中要員</span><strong>{today.active}<small>名</small></strong><em>更新確認 12名</em></div><div className="attention"><span>要確認アラート</span><strong>7<small>件</small></strong><em>期限超過・停滞</em></div></div>
-    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskId={v3FollowUpTask?.id ?? null} /><FunnelAndProspects /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard />
+    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskId={v3FollowUpTask?.id ?? null} /><FunnelAndProspects /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
     <ActivityLog logs={displayedLogs} onClearV3Result={v3DemoResult ? clearV3DemoResult : undefined} /><CommandPanel onExecute={execute} running={running} /><footer>SES AI Office Dashboard <span>•</span> モックデータ最終更新 18:30</footer>
   </main>{selected && <AgentModal agent={selected} onClose={() => setSelected(null)} />}{selectedTask && <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />}{toast && <div className="toast" role="status"><Check size={17} />{toast}</div>}</div>;
 }

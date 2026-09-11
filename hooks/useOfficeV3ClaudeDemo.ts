@@ -78,12 +78,13 @@ export function useOfficeV3ClaudeDemo() {
       completionStoredRef.current ||
       selectedScenario.id !== MATCHING_SCENARIO_ID ||
       approvalState !== "approved" ||
-      !finalStep
+      !finalStep ||
+      !selectedScenario.opportunity
     ) return;
 
     const finalAgentName = officeAgents.find(agent => agent.id === finalStep.agentId)?.name ?? finalStep.agentId;
     const result: OfficeV3DemoResult = {
-      version: 1,
+      version: 2,
       source: "office-v3-claude",
       mock: true,
       scenarioId: selectedScenario.id,
@@ -93,6 +94,9 @@ export function useOfficeV3ClaudeDemo() {
       finalAgentName,
       resultTitle: "案件と人材のマッチング完了",
       resultSummary: "Human承認済み。提案準備が完了しました。",
+      // Step18-B: scenario側のmock案件識別子をそのままコピーする（Dashboard側で案件名を推測しない）。
+      opportunityId: selectedScenario.opportunity.opportunityId,
+      opportunityTitle: selectedScenario.opportunity.title,
     };
 
     try {

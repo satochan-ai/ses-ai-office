@@ -34,6 +34,8 @@ const matchingScenario: OfficeV3DemoScenario = {
     { label: "最終候補者", value: "1名" },
     { label: "マッチングスコア", value: "88点" },
   ],
+  // Step18-B: Dashboard Pipeline「提案準備」card導出用のmock案件識別子（CRM・本番DBのIDではない）。
+  opportunity: { opportunityId: "mock-opp-001", title: "Java業務システム開発支援" },
   steps: [
     { id: "m-01", title: "案件受信", agentId: "manager", statusText: "案件受信", durationMs: 900,
       logs: ["Java業務システム開発支援案件を受信しました", "緊急度「高」として処理を開始します"] },
