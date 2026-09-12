@@ -125,3 +125,27 @@ export function readOfficeV3DemoResultStore(): OfficeV3DemoResultStore | null {
 export function writeOfficeV3DemoResultStore(store: OfficeV3DemoResultStore): void {
   sessionStorage.setItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY, JSON.stringify(store));
 }
+
+/**
+ * Step23-B: 既存storeへ、resultのscenarioIdに対応するslotだけを差し替えた新しいstoreを返す純粋関数。
+ * storeがnullの場合は、対象slotだけを持つ新規storeを作る。他slotには一切触れない。
+ */
+export function mergeOfficeV3DemoResult(
+  store: OfficeV3DemoResultStore | null,
+  result: OfficeV3DemoResult,
+): OfficeV3DemoResultStore {
+  const results = store?.results ?? {};
+
+  switch (result.scenarioId) {
+    case "matching-proposal":
+      return { version: 1, results: { ...results, matching: result } };
+    case "new-client-outreach":
+      return { version: 1, results: { ...results, newClient: result } };
+    case "candidate-screening":
+      return { version: 1, results: { ...results, recruiting: result } };
+    default: {
+      const exhaustive: never = result;
+      return exhaustive;
+    }
+  }
+}

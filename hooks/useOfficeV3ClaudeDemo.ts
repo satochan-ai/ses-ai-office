@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { officeAgents } from "@/data/office";
 import { officeV3ClaudeDemoScenarios } from "@/data/officeV3ClaudeDemo";
-import { readOfficeV3DemoResultStore, writeOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
+import { mergeOfficeV3DemoResult, readOfficeV3DemoResultStore, writeOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import type {
   CandidateScreeningDemoResult,
   MatchingDemoResult,
@@ -106,8 +106,7 @@ export function useOfficeV3ClaudeDemo() {
         opportunityTitle: selectedScenario.opportunity.title,
       };
       try {
-        const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
-        writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, matching: result } });
+        writeOfficeV3DemoResultStore(mergeOfficeV3DemoResult(readOfficeV3DemoResultStore(), result));
         completionStoredRef.current = true;
       } catch {
         // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
@@ -133,8 +132,7 @@ export function useOfficeV3ClaudeDemo() {
         prospectName: selectedScenario.prospect.name,
       };
       try {
-        const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
-        writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, newClient: result } });
+        writeOfficeV3DemoResultStore(mergeOfficeV3DemoResult(readOfficeV3DemoResultStore(), result));
         completionStoredRef.current = true;
       } catch {
         // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
@@ -159,8 +157,7 @@ export function useOfficeV3ClaudeDemo() {
         candidateName: selectedScenario.candidate.name,
       };
       try {
-        const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
-        writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, recruiting: result } });
+        writeOfficeV3DemoResultStore(mergeOfficeV3DemoResult(readOfficeV3DemoResultStore(), result));
         completionStoredRef.current = true;
       } catch {
         // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
