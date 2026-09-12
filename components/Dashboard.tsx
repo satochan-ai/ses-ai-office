@@ -34,7 +34,7 @@ function Header({ onMenu }: { onMenu: () => void }) {
   return <header className="header"><div className="brand">
     <button className="mobile-menu icon-button" onClick={onMenu} aria-label="メニューを開く"><Menu size={20} /></button>
     <div className="brand-mark"><Sparkles size={21} /></div><div><strong>SES AI Office</strong><span>営業・採用業務をAIで加速</span></div>
-  </div><div className="header-actions"><Link className="v3-link" href="/office-v3-claude"><Building2 size={15} />AI Office V3<b className="v3-tag">正式版</b></Link><Link className="office-return" href="/"><Building2 size={15} />AIオフィスへ戻る</Link><div className="now"><span>2026年7月16日 木曜日</span><strong>18:30</strong></div>
+  </div><div className="header-actions"><Link className="v3-link" href="/office-v3-claude"><Building2 size={15} />AI Office V3<b className="v3-tag">Demo</b></Link><Link className="office-return" href="/"><Building2 size={15} />AIオフィスへ戻る</Link><div className="now"><span>2026年7月16日 木曜日</span><strong>18:30</strong></div>
     <div className="live-pill"><span className="pulse" /> AI社員 8名 稼働中</div><button className="icon-button" aria-label="通知"><Bell size={19} /><i>3</i></button>
     <button className="icon-button hide-mobile" aria-label="設定"><Settings size={19} /></button><div className="user"><div className="avatar">さ</div><span>さとちゃん</span></div>
   </div></header>;
@@ -107,7 +107,7 @@ function PipelineBoard({ v3Card }: { v3Card?: PipelineCard | null }) {
 }
 
 function ActivityLog({ logs, onClearV3Result }: { logs: ActivityType[]; onClearV3Result?: () => void }) {
-  return <Panel title="AI実行ログ" subtitle="最新5件" action={onClearV3Result ? <button className="text-button" onClick={onClearV3Result}>V3デモ結果をクリア</button> : <button className="text-button">すべてのログを見る <ArrowRight size={15} /></button>}><div className="timeline log-compact">{logs.slice(0, 5).map((log, i) => <div className="log" key={`${log.time}-${i}`}><span className={`log-dot ${log.status === "処理中" ? "running" : ""}`}>{log.status === "完了" ? <Check size={11} /> : <Activity size={11} />}</span><time>{log.time}</time><div><strong>{log.agent}</strong><p>{log.action}</p></div><StatusBadge tone={log.status === "完了" ? "green" : "blue"}>{log.status}</StatusBadge></div>)}</div></Panel>;
+  return <Panel title="AI実行ログ" subtitle="最新5件" action={onClearV3Result ? <button className="text-button" onClick={onClearV3Result}>V3デモの反映結果を消去</button> : <button className="text-button">すべてのログを見る <ArrowRight size={15} /></button>}><div className="timeline log-compact">{logs.slice(0, 5).map((log, i) => <div className="log" key={`${log.time}-${i}`}><span className={`log-dot ${log.status === "処理中" ? "running" : ""}`}>{log.status === "完了" ? <Check size={11} /> : <Activity size={11} />}</span><time>{log.time}</time><div><strong>{log.agent}</strong><p>{log.action}</p></div><StatusBadge tone={log.status === "完了" ? "green" : "blue"}>{log.status}</StatusBadge></div>)}</div></Panel>;
 }
 
 function CommandPanel({ onExecute, running }: { onExecute: (text: string, agent: string) => void; running: boolean }) {
@@ -149,6 +149,7 @@ export default function Dashboard() {
   return <div className="app-shell"><Header onMenu={() => setSidebar(true)} /><Sidebar open={sidebar} onClose={() => setSidebar(false)} /><main>
     <div className="page-intro"><div><p><span className="pulse" />AI営業チームは正常に稼働しています</p><h1>おはようございます、さとちゃんさん</h1><span>今日の判断に必要な情報だけをまとめました。</span></div><button><Search size={16} />企業・案件・要員を検索 <kbd>⌘ K</kbd></button></div>
     {demoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>{demoResult.scenarioTitle ?? "Java案件の提案準備が完了"}</strong> {demoResult.dashboardSummary ?? "新着案件 +1 ・ 提案候補 +3 ・ 提案中 +1"}</span></div><button onClick={resetDemo}>デモ結果をリセット</button></div>}
+    {v3DemoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
     <div className="mini-summary"><div><span>採用選考中</span><strong>{today.recruit}<small>件</small></strong><em>書類選考 18件</em></div><div><span>稼働中要員</span><strong>{today.active}<small>名</small></strong><em>更新確認 12名</em></div><div className="attention"><span>要確認アラート</span><strong>7<small>件</small></strong><em>期限超過・停滞</em></div></div>
     <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskId={v3FollowUpTask?.id ?? null} /><FunnelAndProspects /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
