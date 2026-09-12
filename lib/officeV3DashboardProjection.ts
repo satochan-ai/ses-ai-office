@@ -1,5 +1,5 @@
-import type { Activity, PriorityTask } from "@/types";
-import type { MatchingDemoResult } from "@/types/officeV3ClaudeDemo";
+import type { Activity, PriorityTask, Prospect } from "@/types";
+import type { MatchingDemoResult, NewClientDemoResult, OfficeV3DemoResult } from "@/types/officeV3ClaudeDemo";
 
 export type PipelineCard = {
   opportunityId?: string;
@@ -10,11 +10,23 @@ export type PipelineCard = {
   updated: string;
 };
 
-export type V3DashboardProjection = {
+export type ProspectCard = Prospect & { prospectId: string };
+
+export type MatchingDashboardProjection = {
+  scenarioId: "matching-proposal";
   log: Activity;
   task: PriorityTask;
   pipelineCard: PipelineCard;
 };
+
+export type NewClientDashboardProjection = {
+  scenarioId: "new-client-outreach";
+  log: Activity;
+  task: PriorityTask;
+  prospectCard: ProspectCard;
+};
+
+export type V3DashboardProjection = MatchingDashboardProjection | NewClientDashboardProjection;
 
 function formatDemoTime(value: string) {
   const date = new Date(value);
@@ -22,11 +34,12 @@ function formatDemoTime(value: string) {
   return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
 }
 
-/** matching完了結果を、副作用なしで現在のDashboard表示3点へ変換する。 */
-export function projectV3DemoResultToDashboard(result: MatchingDemoResult): V3DashboardProjection {
+/** matching完了結果を、副作用なしでDashboard表示3点へ変換する。Step17-F/18-Bの出力値から変更しない。 */
+export function projectMatchingDemoResult(result: MatchingDemoResult): MatchingDashboardProjection {
   const time = formatDemoTime(result.completedAt);
 
   return {
+    scenarioId: "matching-proposal",
     log: {
       time,
       agent: result.finalAgentName,
@@ -50,4 +63,45 @@ export function projectV3DemoResultToDashboard(result: MatchingDemoResult): V3Da
       updated: time,
     },
   };
+}
+
+/** Step21-B: new-client完了結果を、副作用なしでDashboard表示3点へ変換する。 */
+export function projectNewClientDemoResult(result: NewClientDemoResult): NewClientDashboardProjection {
+  const time = formatDemoTime(result.completedAt);
+
+  return {
+    scenarioId: "new-client-outreach",
+    log: {
+      time,
+      agent: result.finalAgentName,
+      action: `${result.resultTitle}（V3 Demo・Mock）`,
+      status: "完了",
+    },
+    task: {
+      id: 9,
+      title: "候補企業を確認し、初回アプローチを準備する",
+      agent: "AI新規開拓担当",
+      priority: "高",
+      deadline: "要確認",
+      status: "確認待ち",
+      category: "新規開拓",
+    },
+    prospectCard: {
+      prospectId: result.prospectId,
+      company: result.prospectName,
+      type: "新規顧客候補",
+      touch: "初回アプローチ準備完了",
+      next: "初回アプローチを確認",
+      due: "要確認",
+      agent: "AI新規開拓担当",
+    },
+  };
+}
+
+export function projectV3DemoResultToDashboard(result: MatchingDemoResult): MatchingDashboardProjection;
+export function projectV3DemoResultToDashboard(result: NewClientDemoResult): NewClientDashboardProjection;
+export function projectV3DemoResultToDashboard(result: OfficeV3DemoResult): V3DashboardProjection;
+export function projectV3DemoResultToDashboard(result: OfficeV3DemoResult): V3DashboardProjection {
+  if (result.scenarioId === "matching-proposal") return projectMatchingDemoResult(result);
+  return projectNewClientDemoResult(result);
 }

@@ -2,11 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { officeAgents } from "@/data/office";
-import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY, officeV3ClaudeDemoScenarios } from "@/data/officeV3ClaudeDemo";
+import { officeV3ClaudeDemoScenarios } from "@/data/officeV3ClaudeDemo";
+import { readOfficeV3DemoResultStore, writeOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import type {
+  MatchingDemoResult,
+  NewClientDemoResult,
   OfficeV3ApprovalState,
   OfficeV3DemoLog,
-  OfficeV3DemoResult,
   OfficeV3DemoScenario,
   OfficeV3DemoStatus,
   OfficeV3DemoStep,
@@ -14,6 +16,7 @@ import type {
 
 const DEFAULT_SCENARIO_ID = officeV3ClaudeDemoScenarios[0].id;
 const MATCHING_SCENARIO_ID = "matching-proposal";
+const NEW_CLIENT_SCENARIO_ID = "new-client-outreach";
 
 /**
  * Claude版V3専用の固定デモ（5シナリオ）進行フック。デモ状態の唯一の管理元。
@@ -72,38 +75,68 @@ export function useOfficeV3ClaudeDemo() {
     return null;
   }, [currentStepIndex, rejectionIndex, steps, rejectionSteps]);
 
-  const storeCompletedMatchingResult = useCallback(() => {
+  /**
+   * Step21-B: matching・new-clientの完了結果を、シナリオ別最新結果storeへ保存する。
+   * 自シナリオのslotだけを更新し、もう一方の既存結果は維持する（読取→自slotのみ差し替え→書き戻し）。
+   * 他3シナリオは対象外（scenario idが一致しなければ何もしない）。
+   */
+  const storeCompletedDemoResult = useCallback(() => {
     const finalStep = steps[steps.length - 1];
-    if (
-      completionStoredRef.current ||
-      selectedScenario.id !== MATCHING_SCENARIO_ID ||
-      approvalState !== "approved" ||
-      !finalStep ||
-      !selectedScenario.opportunity
-    ) return;
+    if (completionStoredRef.current || approvalState !== "approved" || !finalStep) return;
 
     const finalAgentName = officeAgents.find(agent => agent.id === finalStep.agentId)?.name ?? finalStep.agentId;
-    const result: OfficeV3DemoResult = {
-      version: 2,
-      source: "office-v3-claude",
-      mock: true,
-      scenarioId: selectedScenario.id,
-      scenarioTitle: selectedScenario.title,
-      completedAt: new Date().toISOString(),
-      finalAgentId: finalStep.agentId,
-      finalAgentName,
-      resultTitle: "案件と人材のマッチング完了",
-      resultSummary: "Human承認済み。提案準備が完了しました。",
-      // Step18-B: scenario側のmock案件識別子をそのままコピーする（Dashboard側で案件名を推測しない）。
-      opportunityId: selectedScenario.opportunity.opportunityId,
-      opportunityTitle: selectedScenario.opportunity.title,
-    };
 
-    try {
-      sessionStorage.setItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY, JSON.stringify(result));
-      completionStoredRef.current = true;
-    } catch {
-      // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
+    if (selectedScenario.id === MATCHING_SCENARIO_ID) {
+      if (!selectedScenario.opportunity) return;
+      const result: MatchingDemoResult = {
+        version: 2,
+        source: "office-v3-claude",
+        mock: true,
+        scenarioId: "matching-proposal",
+        scenarioTitle: selectedScenario.title,
+        completedAt: new Date().toISOString(),
+        finalAgentId: finalStep.agentId,
+        finalAgentName,
+        resultTitle: "案件と人材のマッチング完了",
+        resultSummary: "Human承認済み。提案準備が完了しました。",
+        // Step18-B: scenario側のmock案件識別子をそのままコピーする（Dashboard側で案件名を推測しない）。
+        opportunityId: selectedScenario.opportunity.opportunityId,
+        opportunityTitle: selectedScenario.opportunity.title,
+      };
+      try {
+        const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
+        writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, matching: result } });
+        completionStoredRef.current = true;
+      } catch {
+        // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
+      }
+      return;
+    }
+
+    if (selectedScenario.id === NEW_CLIENT_SCENARIO_ID) {
+      if (!selectedScenario.prospect) return;
+      const result: NewClientDemoResult = {
+        version: 2,
+        source: "office-v3-claude",
+        mock: true,
+        scenarioId: "new-client-outreach",
+        scenarioTitle: selectedScenario.title,
+        completedAt: new Date().toISOString(),
+        finalAgentId: finalStep.agentId,
+        finalAgentName,
+        resultTitle: "新規顧客への初回アプローチ準備完了",
+        resultSummary: "Human承認済み。初回アプローチの準備が完了しました。",
+        // Step21-B: scenario側のmock企業識別子をそのままコピーする（Dashboard側で企業名を推測しない）。
+        prospectId: selectedScenario.prospect.prospectId,
+        prospectName: selectedScenario.prospect.name,
+      };
+      try {
+        const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
+        writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, newClient: result } });
+        completionStoredRef.current = true;
+      } catch {
+        // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
+      }
     }
   }, [approvalState, selectedScenario, steps]);
 
@@ -145,7 +178,7 @@ export function useOfficeV3ClaudeDemo() {
         if (nextIdx < steps.length) {
           setCurrentStepIndex(nextIdx);
         } else {
-          storeCompletedMatchingResult();
+          storeCompletedDemoResult();
           setDemoStatus("completed");
         }
       }
@@ -153,7 +186,7 @@ export function useOfficeV3ClaudeDemo() {
 
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, appendLogs, storeCompletedMatchingResult]);
+  }, [activeStep, appendLogs, storeCompletedDemoResult]);
 
   const resetRuntimeState = useCallback(() => {
     loggedStepRef.current = null;

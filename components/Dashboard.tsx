@@ -12,11 +12,10 @@ import {
   agents, attentionItems, funnels, initialActivities, pipelineColumns, prospects, summaries, tasks,
 } from "@/data/mockData";
 import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY } from "@/data/officeV3ClaudeDemo";
-import { projectV3DemoResultToDashboard, type PipelineCard } from "@/lib/officeV3DashboardProjection";
-import { isMatchingDemoResult } from "@/lib/officeV3DemoResult";
-import type { Activity as ActivityType, Agent as AgentType, PriorityTask, Tone } from "@/types";
+import { projectV3DemoResultToDashboard, type PipelineCard, type ProspectCard } from "@/lib/officeV3DashboardProjection";
+import { readOfficeV3DemoResultStore, type OfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
+import type { Activity as ActivityType, Agent as AgentType, PriorityTask, Prospect, Tone } from "@/types";
 import type { DemoStoredResult } from "@/types/demo";
-import type { OfficeV3DemoResult } from "@/types/officeV3ClaudeDemo";
 import { DEMO_STORAGE_KEY } from "@/data/demoScenario";
 
 const icons = [Target, CalendarCheck, BriefcaseBusiness, Send, MessageSquareText];
@@ -61,11 +60,11 @@ const taskGroups = [
   { title: "確認待ち", tone: "waiting", ids: [2] }, { title: "AI処理中", tone: "running", ids: [5] },
 ];
 
-function PriorityTasks({ onSelect, taskItems, demoCompleted, v3TaskId }: { onSelect: (task: PriorityTask) => void; taskItems: PriorityTask[]; demoCompleted: boolean; v3TaskId?: number | null }) {
+function PriorityTasks({ onSelect, taskItems, demoCompleted, v3TaskIds }: { onSelect: (task: PriorityTask) => void; taskItems: PriorityTask[]; demoCompleted: boolean; v3TaskIds?: number[] }) {
   const groups = taskGroups.map(group => {
     if (group.title === "今すぐ対応" && demoCompleted) return { ...group, ids: [7, ...group.ids] };
-    // V3「案件と人材のマッチング」完了後の人間の次アクションは、承認・処理が済んだ確認事項として「確認待ち」へ追加する。
-    if (group.title === "確認待ち" && v3TaskId != null) return { ...group, ids: [v3TaskId, ...group.ids] };
+    // V3の各シナリオ完了後の人間の次アクションは、承認・処理が済んだ確認事項として「確認待ち」へ追加する（複数同時可）。
+    if (group.title === "確認待ち" && v3TaskIds && v3TaskIds.length > 0) return { ...group, ids: [...v3TaskIds, ...group.ids] };
     return group;
   });
   return <Panel title="今日の優先タスク" subtitle="売上インパクトと期限から、今見るべき6件に絞りました" action={<button className="text-button">すべて見る <ArrowRight size={15} /></button>}>
@@ -75,14 +74,17 @@ function PriorityTasks({ onSelect, taskItems, demoCompleted, v3TaskId }: { onSel
   </Panel>;
 }
 
-function FunnelAndProspects() {
+function FunnelAndProspects({ v3ProspectCard }: { v3ProspectCard?: ProspectCard | null }) {
   const [tab, setTab] = useState<"customer" | "bp">("customer");
   const labels = tab === "customer" ? ["開拓候補", "アプローチ済", "返信あり", "商談調整", "初回商談", "2回目商談", "案件獲得", "取引開始"] : ["開拓候補", "アプローチ済", "返信あり", "商談調整", "初回商談", "2回目商談", "情報交換", "取引開始"];
-  const values = funnels[tab]; const visibleProspects = tab === "customer" ? prospects.filter(p => p.type.includes("顧客")) : prospects.filter(p => p.type.includes("BP"));
+  const values = funnels[tab];
+  const fixedProspects: Prospect[] = tab === "customer" ? prospects.filter(p => p.type.includes("顧客")) : prospects.filter(p => p.type.includes("BP"));
+  // V3 prospect cardは「顧客開拓」タブの先頭にのみ追加する。固定mock配列自体は変更しない。
+  const visibleProspects: Prospect[] = tab === "customer" && v3ProspectCard ? [v3ProspectCard, ...fixedProspects] : fixedProspects;
   return <Panel title="新規開拓" subtitle="ファネルの停滞と、次に動かす企業だけを表示" action={<div className="tabs"><button className={tab === "customer" ? "active" : ""} onClick={() => setTab("customer")}>顧客開拓</button><button className={tab === "bp" ? "active" : ""} onClick={() => setTab("bp")}>BP開拓</button></div>}>
     <div className="funnel-horizontal">{values.map((value, i) => <div className="funnel-node" key={labels[i]}><span>{labels[i]}</span><strong>{value}</strong>{i < values.length - 1 && <i><ChevronRight size={14} /></i>}</div>)}</div>
     <div className="focus-row-head"><div><Target size={15} /><strong>今、対応すべき企業</strong></div><button className="text-button">新規開拓を開く <ArrowRight size={14} /></button></div>
-    <div className="prospect-cards">{visibleProspects.map(p => <article className="prospect-card" key={p.company}><header><StatusBadge tone={p.type.includes("BP") ? "orange" : "purple"}>{p.type}</StatusBadge><StatusBadge tone={p.due === "本日" ? "red" : "gray"}>{p.due}</StatusBadge></header><h3>{p.company}</h3><p><span>現在</span>{p.touch}</p><p><span>次へ</span><b>{p.next}</b></p><footer><Bot size={13} />{p.agent}</footer></article>)}</div>
+    <div className="prospect-cards">{visibleProspects.map(p => <article className="prospect-card" key={p.prospectId ?? p.company}><header><StatusBadge tone={p.type.includes("BP") ? "orange" : "purple"}>{p.type}</StatusBadge><StatusBadge tone={p.due === "本日" ? "red" : "gray"}>{p.due}</StatusBadge></header><h3>{p.company}</h3><p><span>現在</span>{p.touch}</p><p><span>次へ</span><b>{p.next}</b></p><footer><Bot size={13} />{p.agent}</footer></article>)}</div>
   </Panel>;
 }
 
@@ -129,30 +131,38 @@ function TaskModal({ task, onClose }: { task: PriorityTask; onClose: () => void 
 export default function Dashboard() {
   const [sidebar, setSidebar] = useState(false); const [selected, setSelected] = useState<AgentType | null>(null); const [selectedTask, setSelectedTask] = useState<PriorityTask | null>(null); const [logs, setLogs] = useState(initialActivities); const [running, setRunning] = useState(false); const [toast, setToast] = useState("");
   const [demoResult, setDemoResult] = useState<DemoStoredResult | null>(null);
-  const [v3DemoResult, setV3DemoResult] = useState<OfficeV3DemoResult | null>(null);
+  const [v3Store, setV3Store] = useState<OfficeV3DemoResultStore | null>(null);
   const executeTimer = useRef<number | null>(null);
   const today = useMemo(() => ({ recruit: 36, active: 128 }), []);
   useEffect(() => { const raw = sessionStorage.getItem(DEMO_STORAGE_KEY); if (!raw) return; try { const result = JSON.parse(raw) as DemoStoredResult; setDemoResult(result); setLogs([...result.logs].reverse().map((action, index) => ({ time: `18:${Math.max(0, 30 - index).toString().padStart(2, "0")}`, agent: action.includes("契約") || action.includes("勤務表") ? "AI契約・請求管理担当" : action.includes("ナレッジ") || action.includes("改善") ? "AI教育・ナレッジ担当" : action.includes("面談") ? "AI提案・面談支援担当" : action.includes("マッチング") || action.includes("候補") ? "AIマッチング担当" : action.includes("分析") || action.includes("失注") ? "AI分析担当" : "AI営業Mgr", action, status: "完了" as const }))); } catch { sessionStorage.removeItem(DEMO_STORAGE_KEY); } }, []);
-  useEffect(() => { try { const raw = sessionStorage.getItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); if (!raw) return; const result: unknown = JSON.parse(raw); if (isMatchingDemoResult(result)) setV3DemoResult(result); } catch { /* V3のタブ内モック結果を読めなくてもDashboardは通常表示する。 */ } }, []);
+  useEffect(() => { const store = readOfficeV3DemoResultStore(); if (store) setV3Store(store); }, []);
   const displayedSummaries = summaries.map(item => item.label === "新着案件" && demoResult ? { ...item, value: item.value + demoResult.newJobs, note: "デモ案件 +1" } : item.label === "提案中" && demoResult ? { ...item, value: item.value + demoResult.proposals, note: "提案準備完了 +1" } : item);
   const displayedTasks: PriorityTask[] = demoResult ? [{ id: 7, title: demoResult.priorityTasks?.[0] ?? "Java案件の提案送付", agent: demoResult.scenarioId === "contract-risk" ? "AIフォロー担当" : demoResult.scenarioId === "lost-knowledge" ? "AI分析担当" : "AI営業Mgr", priority: "高", deadline: "今すぐ", status: "未着手", category: demoResult.scenarioId === "contract-risk" ? "契約" : demoResult.scenarioId === "lost-knowledge" ? "分析" : "提案" }, ...tasks] : tasks;
-  const v3Projection = v3DemoResult ? projectV3DemoResultToDashboard(v3DemoResult) : null;
-  const v3FollowUpTask = v3Projection?.task ?? null;
-  const displayedTasksWithV3 = v3FollowUpTask ? [v3FollowUpTask, ...displayedTasks] : displayedTasks;
-  const v3PipelineCard = v3Projection?.pipelineCard ?? null;
+  // completedAt降順（新しい結果が上）。V3結果同士の並びをscenario固定順にしない。
+  const v3ResultsSorted = [v3Store?.results.matching, v3Store?.results.newClient]
+    .filter((result): result is NonNullable<typeof result> => result != null)
+    .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+  const v3Projections = v3ResultsSorted.map(projectV3DemoResultToDashboard);
+  const v3Tasks = v3Projections.map(p => p.task);
+  const v3TaskIds = v3Tasks.map(t => t.id);
+  const displayedTasksWithV3 = v3Tasks.length > 0 ? [...v3Tasks, ...displayedTasks] : displayedTasks;
+  const matchingProjection = v3Store?.results.matching ? projectV3DemoResultToDashboard(v3Store.results.matching) : null;
+  const newClientProjection = v3Store?.results.newClient ? projectV3DemoResultToDashboard(v3Store.results.newClient) : null;
+  const v3PipelineCard = matchingProjection?.pipelineCard ?? null;
+  const v3ProspectCard = newClientProjection?.prospectCard ?? null;
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
-  const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3DemoResult(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
-  const displayedLogs: ActivityType[] = v3Projection ? [v3Projection.log, ...logs] : logs;
+  const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3Store(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
+  const displayedLogs: ActivityType[] = v3Projections.length > 0 ? [...v3Projections.map(p => p.log), ...logs] : logs;
   const execute = (text: string, agent: string) => { if (executeTimer.current !== null) window.clearTimeout(executeTimer.current); setRunning(true); setToast("AI社員に指示を送信しました"); setLogs(prev => [{ time: "18:30", agent, action: `一括指示を受付：${text.slice(0, 22)}…`, status: "処理中" }, ...prev]); executeTimer.current = window.setTimeout(() => { setRunning(false); setToast("優先アクションの整理が完了しました"); setLogs(prev => prev.map((l, i) => i === 0 ? { ...l, status: "完了" } : l)); executeTimer.current = null; }, 1600); };
   useEffect(() => () => { if (executeTimer.current !== null) window.clearTimeout(executeTimer.current); }, []);
   useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(""), 3000); return () => window.clearTimeout(id); }, [toast]);
   return <div className="app-shell"><Header onMenu={() => setSidebar(true)} /><Sidebar open={sidebar} onClose={() => setSidebar(false)} /><main>
     <div className="page-intro"><div><p><span className="pulse" />AI営業チームは正常に稼働しています</p><h1>おはようございます、さとちゃんさん</h1><span>今日の判断に必要な情報だけをまとめました。</span></div><button><Search size={16} />企業・案件・要員を検索 <kbd>⌘ K</kbd></button></div>
     {demoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>{demoResult.scenarioTitle ?? "Java案件の提案準備が完了"}</strong> {demoResult.dashboardSummary ?? "新着案件 +1 ・ 提案候補 +3 ・ 提案中 +1"}</span></div><button onClick={resetDemo}>デモ結果をリセット</button></div>}
-    {v3DemoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
+    {v3Projections.length > 0 && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
     <div className="mini-summary"><div><span>採用選考中</span><strong>{today.recruit}<small>件</small></strong><em>書類選考 18件</em></div><div><span>稼働中要員</span><strong>{today.active}<small>名</small></strong><em>更新確認 12名</em></div><div className="attention"><span>要確認アラート</span><strong>7<small>件</small></strong><em>期限超過・停滞</em></div></div>
-    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskId={v3FollowUpTask?.id ?? null} /><FunnelAndProspects /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
-    <ActivityLog logs={displayedLogs} onClearV3Result={v3DemoResult ? clearV3DemoResult : undefined} /><CommandPanel onExecute={execute} running={running} /><footer>SES AI Office Dashboard <span>•</span> モックデータ最終更新 18:30</footer>
+    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskIds={v3TaskIds} /><FunnelAndProspects v3ProspectCard={v3ProspectCard} /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
+    <ActivityLog logs={displayedLogs} onClearV3Result={v3Projections.length > 0 ? clearV3DemoResult : undefined} /><CommandPanel onExecute={execute} running={running} /><footer>SES AI Office Dashboard <span>•</span> モックデータ最終更新 18:30</footer>
   </main>{selected && <AgentModal agent={selected} onClose={() => setSelected(null)} />}{selectedTask && <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />}{toast && <div className="toast" role="status"><Check size={17} />{toast}</div>}</div>;
 }

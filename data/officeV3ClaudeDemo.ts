@@ -94,6 +94,8 @@ const newClientScenario: OfficeV3DemoScenario = {
     { label: "接点", value: "交流会で名刺交換" },
     { label: "優先度", value: "高" },
   ],
+  // Step21-B: Dashboard Prospect card導出用のmock企業識別子（CRM・企業マスタのIDではない）。
+  prospect: { prospectId: "mock-prospect-001", name: "株式会社ネクストリンク" },
   steps: [
     { id: "n-01", title: "対象企業情報を受信", agentId: "newbiz", statusText: "企業情報受信", durationMs: 900,
       logs: ["株式会社ネクストリンクの企業情報を受信しました"] },

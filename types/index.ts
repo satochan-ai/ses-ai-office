@@ -29,10 +29,12 @@ export type Activity = {
 };
 
 export type Prospect = {
+  /** V3 Demo由来のcardを識別する場合のみ設定（mock）。CRM ID・企業マスタIDではない。 */
+  prospectId?: string;
   company: string;
   type: string;
   touch: string;
-  field: string;
+  field?: string;
   next: string;
   due: string;
   agent: string;

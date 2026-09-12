@@ -53,8 +53,15 @@ export type MatchingDemoResult = OfficeV3DemoResultBase & {
   opportunityTitle: string;
 };
 
-/** 現在Dashboard連携する完了結果はmatchingシナリオのみ。 */
-export type OfficeV3DemoResult = MatchingDemoResult;
+/** Step21-B: 新規顧客開拓シナリオの完了結果。CRM ID・企業マスタIDではない。Prospect card導出にのみ使う。 */
+export type NewClientDemoResult = OfficeV3DemoResultBase & {
+  scenarioId: "new-client-outreach";
+  prospectId: string;
+  prospectName: string;
+};
+
+/** Step21-B: Dashboard連携する完了結果はmatching・new-clientの2シナリオ。他3シナリオは未連携。 */
+export type OfficeV3DemoResult = MatchingDemoResult | NewClientDemoResult;
 
 /** ラベル・値の1行（対象データの概要、承認時の指標などで共通利用する）。 */
 export type OfficeV3DemoMetric = {
@@ -85,6 +92,11 @@ export type OfficeV3DemoScenario = {
    * 対応するシナリオ（現状は案件と人材のマッチングのみ）だけが持つ。CRM・本番DBのIDではない。
    */
   opportunity?: { opportunityId: string; title: string };
+  /**
+   * Step21-B: Dashboard Prospect card導出用のmock企業識別子。
+   * 対応するシナリオ（現状は新規顧客開拓のみ）だけが持つ。CRM・企業マスタのIDではない。
+   */
+  prospect?: { prospectId: string; name: string };
   /** 通常進行フロー（最後から2番目のステップで人間承認待ちに入る）。 */
   steps: OfficeV3DemoStep[];
   /** 人間責任者が差し戻した場合だけ再生される簡易フロー。完了後は自動的に承認待ちへ戻る。 */
