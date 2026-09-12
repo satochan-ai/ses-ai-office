@@ -1,5 +1,6 @@
 import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY } from "@/data/officeV3ClaudeDemo";
 import type {
+  CandidateScreeningDemoResult,
   MatchingDemoResult,
   NewClientDemoResult,
   OfficeV3DemoResult,
@@ -51,12 +52,24 @@ export function isNewClientDemoResult(value: unknown): value is NewClientDemoRes
     isNonEmptyString(result.prospectName);
 }
 
+/** Step22-C: recruiting結果を、共通schemaに加えて検証する。 */
+export function isCandidateScreeningDemoResult(value: unknown): value is CandidateScreeningDemoResult {
+  if (!isOfficeV3DemoResultBase(value)) return false;
+  const result = value as unknown as Record<string, unknown>;
+
+  return result.scenarioId === "candidate-screening" &&
+    isNonEmptyString(result.candidateId) &&
+    isNonEmptyString(result.candidateName);
+}
+
 /**
  * Dashboard storage readerはscenario固有guardを直接知らず、この関数だけを使う。
  * Step21-Cで別シナリオを追加する場合は、ここに候補を1行足すだけでよい。
  */
 export function isOfficeV3DemoResult(value: unknown): value is OfficeV3DemoResult {
-  return isMatchingDemoResult(value) || isNewClientDemoResult(value);
+  return isMatchingDemoResult(value) ||
+    isNewClientDemoResult(value) ||
+    isCandidateScreeningDemoResult(value);
 }
 
 /**
@@ -68,6 +81,7 @@ export type OfficeV3DemoResultStore = {
   results: {
     matching?: MatchingDemoResult;
     newClient?: NewClientDemoResult;
+    recruiting?: CandidateScreeningDemoResult;
   };
 };
 
@@ -81,6 +95,7 @@ export function isOfficeV3DemoResultStore(value: unknown): value is OfficeV3Demo
   const results = store.results as Record<string, unknown>;
   if (results.matching !== undefined && !isMatchingDemoResult(results.matching)) return false;
   if (results.newClient !== undefined && !isNewClientDemoResult(results.newClient)) return false;
+  if (results.recruiting !== undefined && !isCandidateScreeningDemoResult(results.recruiting)) return false;
   return true;
 }
 

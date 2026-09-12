@@ -5,6 +5,7 @@ import { officeAgents } from "@/data/office";
 import { officeV3ClaudeDemoScenarios } from "@/data/officeV3ClaudeDemo";
 import { readOfficeV3DemoResultStore, writeOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import type {
+  CandidateScreeningDemoResult,
   MatchingDemoResult,
   NewClientDemoResult,
   OfficeV3ApprovalState,
@@ -17,6 +18,7 @@ import type {
 const DEFAULT_SCENARIO_ID = officeV3ClaudeDemoScenarios[0].id;
 const MATCHING_SCENARIO_ID = "matching-proposal";
 const NEW_CLIENT_SCENARIO_ID = "new-client-outreach";
+const CANDIDATE_SCREENING_SCENARIO_ID = "candidate-screening";
 
 /**
  * Claude版V3専用の固定デモ（5シナリオ）進行フック。デモ状態の唯一の管理元。
@@ -133,6 +135,32 @@ export function useOfficeV3ClaudeDemo() {
       try {
         const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
         writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, newClient: result } });
+        completionStoredRef.current = true;
+      } catch {
+        // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
+      }
+      return;
+    }
+
+    if (selectedScenario.id === CANDIDATE_SCREENING_SCENARIO_ID) {
+      if (!selectedScenario.candidate) return;
+      const result: CandidateScreeningDemoResult = {
+        version: 2,
+        source: "office-v3-claude",
+        mock: true,
+        scenarioId: "candidate-screening",
+        scenarioTitle: selectedScenario.title,
+        completedAt: new Date().toISOString(),
+        finalAgentId: finalStep.agentId,
+        finalAgentName,
+        resultTitle: "採用候補者の面接案内準備完了",
+        resultSummary: "Human承認済み。面接案内の準備が完了しました。",
+        candidateId: selectedScenario.candidate.candidateId,
+        candidateName: selectedScenario.candidate.name,
+      };
+      try {
+        const store = readOfficeV3DemoResultStore() ?? { version: 1 as const, results: {} };
+        writeOfficeV3DemoResultStore({ version: 1, results: { ...store.results, recruiting: result } });
         completionStoredRef.current = true;
       } catch {
         // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。

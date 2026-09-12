@@ -203,6 +203,8 @@ const candidateScreeningScenario: OfficeV3DemoScenario = {
     { label: "応募職種", value: "システムエンジニア" },
     { label: "書類評価", value: "82点" },
   ],
+  // Step22-C: Dashboard採用確認card導出用（実在人物・採用管理DBのIDではない）。
+  candidate: { candidateId: "mock-candidate-001", name: "田中一郎（モック・架空の人物）" },
   steps: [
     { id: "c-01", title: "応募情報を受信", agentId: "recruit", statusText: "応募情報受信", durationMs: 900,
       logs: ["田中一郎さん（モック）の応募情報を受信しました"] },

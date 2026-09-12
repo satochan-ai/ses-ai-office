@@ -12,7 +12,7 @@ import {
   agents, attentionItems, funnels, initialActivities, pipelineColumns, prospects, summaries, tasks,
 } from "@/data/mockData";
 import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY } from "@/data/officeV3ClaudeDemo";
-import { projectV3DemoResultToDashboard, type PipelineCard, type ProspectCard } from "@/lib/officeV3DashboardProjection";
+import { projectV3DemoResultToDashboard, type PipelineCard, type ProspectCard, type RecruitingCard } from "@/lib/officeV3DashboardProjection";
 import { readOfficeV3DemoResultStore, type OfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import type { Activity as ActivityType, Agent as AgentType, PriorityTask, Prospect, Tone } from "@/types";
 import type { DemoStoredResult } from "@/types/demo";
@@ -88,6 +88,10 @@ function FunnelAndProspects({ v3ProspectCard }: { v3ProspectCard?: ProspectCard 
   </Panel>;
 }
 
+function RecruitingReview({ card }: { card: RecruitingCard }) {
+  return <Panel title="採用確認" subtitle="人間の確認が必要な候補者"><article className="recruiting-card"><header><div><span>候補者</span><h3>{card.name}</h3></div><StatusBadge tone="orange">{card.status}</StatusBadge></header><div className="recruiting-card-next"><span>次へ</span><strong>{card.next}</strong></div><footer><span><Bot size={13} />{card.agent}</span><time>{card.updated}</time></footer></article></Panel>;
+}
+
 const agentProgress = [82, 70, 58, 64, 76, 48];
 const agentResults = ["停滞案件3件を検知", "優先候補8社を抽出", "有望BP5社を選定", "商機候補6件を発見", "推薦候補11名を抽出", "面談準備7件を完了"];
 function AgentCards({ onSelect }: { onSelect: (a: AgentType) => void }) {
@@ -139,7 +143,7 @@ export default function Dashboard() {
   const displayedSummaries = summaries.map(item => item.label === "新着案件" && demoResult ? { ...item, value: item.value + demoResult.newJobs, note: "デモ案件 +1" } : item.label === "提案中" && demoResult ? { ...item, value: item.value + demoResult.proposals, note: "提案準備完了 +1" } : item);
   const displayedTasks: PriorityTask[] = demoResult ? [{ id: 7, title: demoResult.priorityTasks?.[0] ?? "Java案件の提案送付", agent: demoResult.scenarioId === "contract-risk" ? "AIフォロー担当" : demoResult.scenarioId === "lost-knowledge" ? "AI分析担当" : "AI営業Mgr", priority: "高", deadline: "今すぐ", status: "未着手", category: demoResult.scenarioId === "contract-risk" ? "契約" : demoResult.scenarioId === "lost-knowledge" ? "分析" : "提案" }, ...tasks] : tasks;
   // completedAt降順（新しい結果が上）。V3結果同士の並びをscenario固定順にしない。
-  const v3ResultsSorted = [v3Store?.results.matching, v3Store?.results.newClient]
+  const v3ResultsSorted = [v3Store?.results.matching, v3Store?.results.newClient, v3Store?.results.recruiting]
     .filter((result): result is NonNullable<typeof result> => result != null)
     .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
   const v3Projections = v3ResultsSorted.map(projectV3DemoResultToDashboard);
@@ -148,8 +152,10 @@ export default function Dashboard() {
   const displayedTasksWithV3 = v3Tasks.length > 0 ? [...v3Tasks, ...displayedTasks] : displayedTasks;
   const matchingProjection = v3Store?.results.matching ? projectV3DemoResultToDashboard(v3Store.results.matching) : null;
   const newClientProjection = v3Store?.results.newClient ? projectV3DemoResultToDashboard(v3Store.results.newClient) : null;
+  const recruitingProjection = v3Store?.results.recruiting ? projectV3DemoResultToDashboard(v3Store.results.recruiting) : null;
   const v3PipelineCard = matchingProjection?.pipelineCard ?? null;
   const v3ProspectCard = newClientProjection?.prospectCard ?? null;
+  const v3RecruitingCard = recruitingProjection?.recruitingCard ?? null;
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
   const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3Store(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
   const displayedLogs: ActivityType[] = v3Projections.length > 0 ? [...v3Projections.map(p => p.log), ...logs] : logs;
@@ -162,7 +168,7 @@ export default function Dashboard() {
     {v3Projections.length > 0 && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
     <div className="mini-summary"><div><span>採用選考中</span><strong>{today.recruit}<small>件</small></strong><em>書類選考 18件</em></div><div><span>稼働中要員</span><strong>{today.active}<small>名</small></strong><em>更新確認 12名</em></div><div className="attention"><span>要確認アラート</span><strong>7<small>件</small></strong><em>期限超過・停滞</em></div></div>
-    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskIds={v3TaskIds} /><FunnelAndProspects v3ProspectCard={v3ProspectCard} /><AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
+    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskIds={v3TaskIds} /><FunnelAndProspects v3ProspectCard={v3ProspectCard} />{v3RecruitingCard && <RecruitingReview card={v3RecruitingCard} />}<AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
     <ActivityLog logs={displayedLogs} onClearV3Result={v3Projections.length > 0 ? clearV3DemoResult : undefined} /><CommandPanel onExecute={execute} running={running} /><footer>SES AI Office Dashboard <span>•</span> モックデータ最終更新 18:30</footer>
   </main>{selected && <AgentModal agent={selected} onClose={() => setSelected(null)} />}{selectedTask && <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />}{toast && <div className="toast" role="status"><Check size={17} />{toast}</div>}</div>;
 }
