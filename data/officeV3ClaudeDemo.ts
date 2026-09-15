@@ -150,6 +150,8 @@ const bpAllianceScenario: OfficeV3DemoScenario = {
     { label: "想定連携", value: "案件・人材交換" },
     { label: "優先度", value: "中" },
   ],
+  // Step24-B: Dashboard BP開拓card導出用（BP管理DB・実在企業のIDではない）。
+  partner: { partnerId: "mock-partner-001", name: "株式会社テックパートナーズ（モック・架空企業）" },
   steps: [
     { id: "b-01", title: "BP候補企業を受信", agentId: "bp", statusText: "候補企業受信", durationMs: 900,
       logs: ["株式会社テックパートナーズをBP候補として受信しました"] },

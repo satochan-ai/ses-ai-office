@@ -3,12 +3,14 @@ import {
   projectCandidateScreeningDemoResult,
   projectMatchingDemoResult,
   projectNewClientDemoResult,
+  projectPartnerDemoResult,
   projectV3DemoResultToDashboard,
 } from "./officeV3DashboardProjection";
 import type {
   CandidateScreeningDemoResult,
   MatchingDemoResult,
   NewClientDemoResult,
+  PartnerDemoResult,
 } from "@/types/officeV3ClaudeDemo";
 
 const FORBIDDEN_EXTERNAL_ACTION_TEXTS = ["送信済み", "アプローチ済み", "CRM登録済み", "商談設定済み", "接触済み"];
@@ -69,6 +71,22 @@ function makeRecruitingResult(overrides: Partial<CandidateScreeningDemoResult> =
     candidateName: "田中一郎（モック・架空の人物）",
     ...overrides,
   } as CandidateScreeningDemoResult;
+}
+
+function makePartnerResult(overrides: Partial<PartnerDemoResult> = {}): PartnerDemoResult {
+  return {
+    ...makeBaseResult({
+      scenarioId: "bp-alliance",
+      finalAgentId: "bp",
+      finalAgentName: "AIBP開拓担当",
+      resultTitle: "BP面談依頼の準備完了",
+      resultSummary: "Human承認済み。BP面談依頼の準備が完了しました。",
+    }),
+    scenarioId: "bp-alliance",
+    partnerId: "mock-partner-001",
+    partnerName: "株式会社テックパートナーズ（モック・架空企業）",
+    ...overrides,
+  } as PartnerDemoResult;
 }
 
 function expectCompletionLogContract(log: { time: string; agent: string; action: string; status: string }, result: { finalAgentName: string; resultTitle: string }) {
@@ -186,6 +204,57 @@ describe("projectCandidateScreeningDemoResult", () => {
   });
 });
 
+describe("projectPartnerDemoResult", () => {
+  const result = makePartnerResult();
+  const projection = projectPartnerDemoResult(result);
+
+  it("returns scenarioId=bp-alliance and task.id=11", () => {
+    expect(projection.scenarioId).toBe("bp-alliance");
+    expect(projection.task.id).toBe(11);
+  });
+
+  it("includes log, task and partnerCard but not other scenario cards", () => {
+    expect(projection).toHaveProperty("log");
+    expect(projection).toHaveProperty("task");
+    expect(projection).toHaveProperty("partnerCard");
+    expect("pipelineCard" in projection).toBe(false);
+    expect("prospectCard" in projection).toBe(false);
+    expect("recruitingCard" in projection).toBe(false);
+  });
+
+  it("fixes the BP interview-request-ready text with no external-action wording", () => {
+    expect(projection.task).toMatchObject({
+      title: "BP候補企業と面談依頼内容を確認する",
+      agent: "AIBP開拓担当",
+      priority: "中",
+      deadline: "要確認",
+      status: "確認待ち",
+      category: "BP",
+    });
+    expect(projection.partnerCard).toMatchObject({
+      type: "新規BP候補",
+      touch: "BP面談依頼準備完了",
+      next: "面談依頼内容を確認",
+      due: "要確認",
+      agent: "AIBP開拓担当",
+    });
+    for (const forbidden of [...FORBIDDEN_EXTERNAL_ACTION_TEXTS, "面談設定済み", "契約済み", "パートナー登録済み"]) {
+      expect(projection.task.title).not.toContain(forbidden);
+      expect(projection.partnerCard.touch).not.toContain(forbidden);
+      expect(projection.partnerCard.next).not.toContain(forbidden);
+    }
+  });
+
+  it("satisfies the completion log contract", () => {
+    expectCompletionLogContract(projection.log, result);
+  });
+
+  it("carries the partner identifiers straight through to the partner card", () => {
+    expect(projection.partnerCard.partnerId).toBe(result.partnerId);
+    expect(projection.partnerCard.company).toBe(result.partnerName);
+  });
+});
+
 describe("projectV3DemoResultToDashboard (dispatch)", () => {
   it("dispatches a matching result to projectMatchingDemoResult's output", () => {
     const result = makeMatchingResult();
@@ -200,5 +269,10 @@ describe("projectV3DemoResultToDashboard (dispatch)", () => {
   it("dispatches a recruiting result to projectCandidateScreeningDemoResult's output", () => {
     const result = makeRecruitingResult();
     expect(projectV3DemoResultToDashboard(result)).toEqual(projectCandidateScreeningDemoResult(result));
+  });
+
+  it("dispatches a partner result to projectPartnerDemoResult's output", () => {
+    const result = makePartnerResult();
+    expect(projectV3DemoResultToDashboard(result)).toEqual(projectPartnerDemoResult(result));
   });
 });

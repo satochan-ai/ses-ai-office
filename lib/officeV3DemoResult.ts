@@ -5,6 +5,7 @@ import type {
   NewClientDemoResult,
   OfficeV3DemoResult,
   OfficeV3DemoResultBase,
+  PartnerDemoResult,
 } from "@/types/officeV3ClaudeDemo";
 
 const BASE_STRING_FIELDS = [
@@ -62,6 +63,16 @@ export function isCandidateScreeningDemoResult(value: unknown): value is Candida
     isNonEmptyString(result.candidateName);
 }
 
+/** Step24-B: BPパートナー開拓結果を、共通schemaに加えて検証する。 */
+export function isPartnerDemoResult(value: unknown): value is PartnerDemoResult {
+  if (!isOfficeV3DemoResultBase(value)) return false;
+  const result = value as unknown as Record<string, unknown>;
+
+  return result.scenarioId === "bp-alliance" &&
+    isNonEmptyString(result.partnerId) &&
+    isNonEmptyString(result.partnerName);
+}
+
 /**
  * Dashboard storage readerはscenario固有guardを直接知らず、この関数だけを使う。
  * Step21-Cで別シナリオを追加する場合は、ここに候補を1行足すだけでよい。
@@ -69,7 +80,8 @@ export function isCandidateScreeningDemoResult(value: unknown): value is Candida
 export function isOfficeV3DemoResult(value: unknown): value is OfficeV3DemoResult {
   return isMatchingDemoResult(value) ||
     isNewClientDemoResult(value) ||
-    isCandidateScreeningDemoResult(value);
+    isCandidateScreeningDemoResult(value) ||
+    isPartnerDemoResult(value);
 }
 
 /**
@@ -82,6 +94,7 @@ export type OfficeV3DemoResultStore = {
     matching?: MatchingDemoResult;
     newClient?: NewClientDemoResult;
     recruiting?: CandidateScreeningDemoResult;
+    bp?: PartnerDemoResult;
   };
 };
 
@@ -96,6 +109,7 @@ export function isOfficeV3DemoResultStore(value: unknown): value is OfficeV3Demo
   if (results.matching !== undefined && !isMatchingDemoResult(results.matching)) return false;
   if (results.newClient !== undefined && !isNewClientDemoResult(results.newClient)) return false;
   if (results.recruiting !== undefined && !isCandidateScreeningDemoResult(results.recruiting)) return false;
+  if (results.bp !== undefined && !isPartnerDemoResult(results.bp)) return false;
   return true;
 }
 
@@ -143,6 +157,8 @@ export function mergeOfficeV3DemoResult(
       return { version: 1, results: { ...results, newClient: result } };
     case "candidate-screening":
       return { version: 1, results: { ...results, recruiting: result } };
+    case "bp-alliance":
+      return { version: 1, results: { ...results, bp: result } };
     default: {
       const exhaustive: never = result;
       return exhaustive;

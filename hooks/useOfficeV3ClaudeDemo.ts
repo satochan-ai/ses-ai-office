@@ -8,6 +8,7 @@ import type {
   CandidateScreeningDemoResult,
   MatchingDemoResult,
   NewClientDemoResult,
+  PartnerDemoResult,
   OfficeV3ApprovalState,
   OfficeV3DemoLog,
   OfficeV3DemoScenario,
@@ -19,6 +20,7 @@ const DEFAULT_SCENARIO_ID = officeV3ClaudeDemoScenarios[0].id;
 const MATCHING_SCENARIO_ID = "matching-proposal";
 const NEW_CLIENT_SCENARIO_ID = "new-client-outreach";
 const CANDIDATE_SCREENING_SCENARIO_ID = "candidate-screening";
+const BP_ALLIANCE_SCENARIO_ID = "bp-alliance";
 
 /**
  * Claude版V3専用の固定デモ（5シナリオ）進行フック。デモ状態の唯一の管理元。
@@ -80,7 +82,7 @@ export function useOfficeV3ClaudeDemo() {
   /**
    * Step21-B: matching・new-clientの完了結果を、シナリオ別最新結果storeへ保存する。
    * 自シナリオのslotだけを更新し、もう一方の既存結果は維持する（読取→自slotのみ差し替え→書き戻し）。
-   * 他3シナリオは対象外（scenario idが一致しなければ何もしない）。
+   * Dashboard未連携のシナリオは対象外（scenario idが一致しなければ何もしない）。
    */
   const storeCompletedDemoResult = useCallback(() => {
     const finalStep = steps[steps.length - 1];
@@ -155,6 +157,31 @@ export function useOfficeV3ClaudeDemo() {
         resultSummary: "Human承認済み。面接案内の準備が完了しました。",
         candidateId: selectedScenario.candidate.candidateId,
         candidateName: selectedScenario.candidate.name,
+      };
+      try {
+        writeOfficeV3DemoResultStore(mergeOfficeV3DemoResult(readOfficeV3DemoResultStore(), result));
+        completionStoredRef.current = true;
+      } catch {
+        // Storageが利用できない環境でも、Office上の固定Demo完了表示は維持する。
+      }
+      return;
+    }
+
+    if (selectedScenario.id === BP_ALLIANCE_SCENARIO_ID) {
+      if (!selectedScenario.partner) return;
+      const result: PartnerDemoResult = {
+        version: 2,
+        source: "office-v3-claude",
+        mock: true,
+        scenarioId: "bp-alliance",
+        scenarioTitle: selectedScenario.title,
+        completedAt: new Date().toISOString(),
+        finalAgentId: finalStep.agentId,
+        finalAgentName,
+        resultTitle: "BP面談依頼の準備完了",
+        resultSummary: "Human承認済み。BP面談依頼の準備が完了しました。",
+        partnerId: selectedScenario.partner.partnerId,
+        partnerName: selectedScenario.partner.name,
       };
       try {
         writeOfficeV3DemoResultStore(mergeOfficeV3DemoResult(readOfficeV3DemoResultStore(), result));

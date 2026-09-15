@@ -67,8 +67,15 @@ export type CandidateScreeningDemoResult = OfficeV3DemoResultBase & {
   candidateName: string;
 };
 
-/** Dashboard連携する完了結果はmatching・new-client・recruitingの3シナリオ。BP・Follow-upは未連携。 */
-export type OfficeV3DemoResult = MatchingDemoResult | NewClientDemoResult | CandidateScreeningDemoResult;
+/** Step24-B: BPパートナー開拓シナリオの完了結果。実在企業・BP管理DBのIDではない。 */
+export type PartnerDemoResult = OfficeV3DemoResultBase & {
+  scenarioId: "bp-alliance";
+  partnerId: string;
+  partnerName: string;
+};
+
+/** Dashboard連携する完了結果はmatching・new-client・recruiting・BPの4シナリオ。Follow-upは未連携。 */
+export type OfficeV3DemoResult = MatchingDemoResult | NewClientDemoResult | CandidateScreeningDemoResult | PartnerDemoResult;
 
 /** ラベル・値の1行（対象データの概要、承認時の指標などで共通利用する）。 */
 export type OfficeV3DemoMetric = {
@@ -106,6 +113,8 @@ export type OfficeV3DemoScenario = {
   prospect?: { prospectId: string; name: string };
   /** Step22-C: Dashboard採用確認card導出用の架空候補者識別子。採用管理DB・実在人物のIDではない。 */
   candidate?: { candidateId: string; name: string };
+  /** Step24-B: Dashboard BP開拓card導出用の架空BP企業識別子。BP管理DB・実在企業のIDではない。 */
+  partner?: { partnerId: string; name: string };
   /** 通常進行フロー（最後から2番目のステップで人間承認待ちに入る）。 */
   steps: OfficeV3DemoStep[];
   /** 人間責任者が差し戻した場合だけ再生される簡易フロー。完了後は自動的に承認待ちへ戻る。 */

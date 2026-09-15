@@ -6,6 +6,7 @@ import {
   isOfficeV3DemoResult,
   isOfficeV3DemoResultBase,
   isOfficeV3DemoResultStore,
+  isPartnerDemoResult,
   mergeOfficeV3DemoResult,
   normalizeOfficeV3DemoResultStore,
   type OfficeV3DemoResultStore,
@@ -14,6 +15,7 @@ import type {
   CandidateScreeningDemoResult,
   MatchingDemoResult,
   NewClientDemoResult,
+  PartnerDemoResult,
 } from "@/types/officeV3ClaudeDemo";
 
 function makeBaseResult(overrides: Record<string, unknown> = {}) {
@@ -72,6 +74,22 @@ function makeRecruitingResult(overrides: Partial<CandidateScreeningDemoResult> =
     candidateName: "田中一郎（モック・架空の人物）",
     ...overrides,
   } as CandidateScreeningDemoResult;
+}
+
+function makePartnerResult(overrides: Partial<PartnerDemoResult> = {}): PartnerDemoResult {
+  return {
+    ...makeBaseResult({
+      scenarioId: "bp-alliance",
+      finalAgentId: "bp",
+      finalAgentName: "AIBP開拓担当",
+      resultTitle: "BP面談依頼の準備完了",
+      resultSummary: "Human承認済み。BP面談依頼の準備が完了しました。",
+    }),
+    scenarioId: "bp-alliance",
+    partnerId: "mock-partner-001",
+    partnerName: "株式会社テックパートナーズ（モック・架空企業）",
+    ...overrides,
+  } as PartnerDemoResult;
 }
 
 function makeStore(results: OfficeV3DemoResultStore["results"] = {}): OfficeV3DemoResultStore {
@@ -146,6 +164,20 @@ describe("isCandidateScreeningDemoResult", () => {
   });
 });
 
+describe("isPartnerDemoResult", () => {
+  it("accepts a valid partner result", () => {
+    expect(isPartnerDemoResult(makePartnerResult())).toBe(true);
+  });
+
+  it("rejects an empty partnerId", () => {
+    expect(isPartnerDemoResult(makePartnerResult({ partnerId: "" }))).toBe(false);
+  });
+
+  it("rejects an empty partnerName", () => {
+    expect(isPartnerDemoResult(makePartnerResult({ partnerName: "" }))).toBe(false);
+  });
+});
+
 describe("isOfficeV3DemoResult (union guard)", () => {
   it("accepts a matching result", () => {
     expect(isOfficeV3DemoResult(makeMatchingResult())).toBe(true);
@@ -159,8 +191,8 @@ describe("isOfficeV3DemoResult (union guard)", () => {
     expect(isOfficeV3DemoResult(makeRecruitingResult())).toBe(true);
   });
 
-  it("rejects an unconnected scenario shape (e.g. bp-alliance)", () => {
-    expect(isOfficeV3DemoResult(makeBaseResult({ scenarioId: "bp-alliance" }))).toBe(false);
+  it("accepts a partner result", () => {
+    expect(isOfficeV3DemoResult(makePartnerResult())).toBe(true);
   });
 
   it("rejects an unconnected scenario shape (e.g. engineer-followup)", () => {
@@ -185,11 +217,16 @@ describe("isOfficeV3DemoResultStore", () => {
     expect(isOfficeV3DemoResultStore(makeStore({ recruiting: makeRecruitingResult() }))).toBe(true);
   });
 
-  it("accepts all 3 slots filled", () => {
+  it("accepts bp only", () => {
+    expect(isOfficeV3DemoResultStore(makeStore({ bp: makePartnerResult() }))).toBe(true);
+  });
+
+  it("accepts all 4 slots filled", () => {
     expect(isOfficeV3DemoResultStore(makeStore({
       matching: makeMatchingResult(),
       newClient: makeNewClientResult(),
       recruiting: makeRecruitingResult(),
+      bp: makePartnerResult(),
     }))).toBe(true);
   });
 
@@ -209,20 +246,26 @@ describe("isOfficeV3DemoResultStore", () => {
     expect(isOfficeV3DemoResultStore(makeStore({ recruiting: makeRecruitingResult({ candidateId: "" }) }))).toBe(false);
   });
 
+  it("rejects an invalid bp slot", () => {
+    expect(isOfficeV3DemoResultStore(makeStore({ bp: makePartnerResult({ partnerId: "" }) }))).toBe(false);
+  });
+
   it("rejects the whole store when one slot is valid and another is invalid (partial invalid)", () => {
     expect(isOfficeV3DemoResultStore(makeStore({
       matching: makeMatchingResult(),
       newClient: makeNewClientResult({ prospectId: "" }),
+      bp: makePartnerResult(),
     }))).toBe(false);
   });
 });
 
 describe("normalizeOfficeV3DemoResultStore", () => {
-  it("accepts a current 3-slot store as-is (value-equal)", () => {
+  it("accepts a current 4-slot store as-is (value-equal)", () => {
     const store = makeStore({
       matching: makeMatchingResult(),
       newClient: makeNewClientResult(),
       recruiting: makeRecruitingResult(),
+      bp: makePartnerResult(),
     });
     expect(normalizeOfficeV3DemoResultStore(store)).toEqual(store);
   });
@@ -286,6 +329,19 @@ describe("mergeOfficeV3DemoResult", () => {
     const merged = mergeOfficeV3DemoResult(store, nextRecruiting);
 
     expect(merged).toEqual({ version: 1, results: { matching, newClient, recruiting: nextRecruiting } });
+  });
+
+  it("updates only the bp slot, keeping matching, newClient and recruiting", () => {
+    const matching = makeMatchingResult();
+    const newClient = makeNewClientResult();
+    const recruiting = makeRecruitingResult();
+    const store = makeStore({ matching, newClient, recruiting });
+    const nextPartner = makePartnerResult();
+
+    expect(mergeOfficeV3DemoResult(store, nextPartner)).toEqual({
+      version: 1,
+      results: { matching, newClient, recruiting, bp: nextPartner },
+    });
   });
 
   it("creates a single-slot store when the existing store is null", () => {

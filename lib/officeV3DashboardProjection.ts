@@ -1,5 +1,5 @@
 import type { Activity, PriorityTask, Prospect } from "@/types";
-import type { CandidateScreeningDemoResult, MatchingDemoResult, NewClientDemoResult, OfficeV3DemoResult, OfficeV3DemoResultBase } from "@/types/officeV3ClaudeDemo";
+import type { CandidateScreeningDemoResult, MatchingDemoResult, NewClientDemoResult, OfficeV3DemoResult, OfficeV3DemoResultBase, PartnerDemoResult } from "@/types/officeV3ClaudeDemo";
 
 export type PipelineCard = {
   opportunityId?: string;
@@ -11,6 +11,7 @@ export type PipelineCard = {
 };
 
 export type ProspectCard = Prospect & { prospectId: string };
+export type PartnerCard = Prospect & { partnerId: string };
 
 export type RecruitingCard = {
   candidateId: string;
@@ -25,6 +26,7 @@ const V3_TASK_IDS = {
   matching: 8,
   newClient: 9,
   recruiting: 10,
+  bp: 11,
 } as const;
 
 export type MatchingDashboardProjection = {
@@ -48,7 +50,14 @@ export type RecruitingDashboardProjection = {
   recruitingCard: RecruitingCard;
 };
 
-export type V3DashboardProjection = MatchingDashboardProjection | NewClientDashboardProjection | RecruitingDashboardProjection;
+export type PartnerDashboardProjection = {
+  scenarioId: "bp-alliance";
+  log: Activity;
+  task: PriorityTask;
+  partnerCard: PartnerCard;
+};
+
+export type V3DashboardProjection = MatchingDashboardProjection | NewClientDashboardProjection | RecruitingDashboardProjection | PartnerDashboardProjection;
 
 function formatDemoTime(value: string) {
   const date = new Date(value);
@@ -144,9 +153,36 @@ export function projectCandidateScreeningDemoResult(result: CandidateScreeningDe
   };
 }
 
+/** Step24-B: BP完了結果を、BP開拓確認を含むDashboard表示3点へ変換する。 */
+export function projectPartnerDemoResult(result: PartnerDemoResult): PartnerDashboardProjection {
+  return {
+    scenarioId: "bp-alliance",
+    log: projectCompletionLog(result),
+    task: {
+      id: V3_TASK_IDS.bp,
+      title: "BP候補企業と面談依頼内容を確認する",
+      agent: "AIBP開拓担当",
+      priority: "中",
+      deadline: "要確認",
+      status: "確認待ち",
+      category: "BP",
+    },
+    partnerCard: {
+      partnerId: result.partnerId,
+      company: result.partnerName,
+      type: "新規BP候補",
+      touch: "BP面談依頼準備完了",
+      next: "面談依頼内容を確認",
+      due: "要確認",
+      agent: "AIBP開拓担当",
+    },
+  };
+}
+
 export function projectV3DemoResultToDashboard(result: MatchingDemoResult): MatchingDashboardProjection;
 export function projectV3DemoResultToDashboard(result: NewClientDemoResult): NewClientDashboardProjection;
 export function projectV3DemoResultToDashboard(result: CandidateScreeningDemoResult): RecruitingDashboardProjection;
+export function projectV3DemoResultToDashboard(result: PartnerDemoResult): PartnerDashboardProjection;
 export function projectV3DemoResultToDashboard(result: OfficeV3DemoResult): V3DashboardProjection;
 export function projectV3DemoResultToDashboard(result: OfficeV3DemoResult): V3DashboardProjection {
   switch (result.scenarioId) {
@@ -156,6 +192,8 @@ export function projectV3DemoResultToDashboard(result: OfficeV3DemoResult): V3Da
       return projectNewClientDemoResult(result);
     case "candidate-screening":
       return projectCandidateScreeningDemoResult(result);
+    case "bp-alliance":
+      return projectPartnerDemoResult(result);
     default: {
       const exhaustive: never = result;
       return exhaustive;

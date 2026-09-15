@@ -12,7 +12,7 @@ import {
   agents, attentionItems, funnels, initialActivities, pipelineColumns, prospects, summaries, tasks,
 } from "@/data/mockData";
 import { OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY } from "@/data/officeV3ClaudeDemo";
-import { projectV3DemoResultToDashboard, type PipelineCard, type ProspectCard, type RecruitingCard } from "@/lib/officeV3DashboardProjection";
+import { projectV3DemoResultToDashboard, type PartnerCard, type PipelineCard, type ProspectCard, type RecruitingCard } from "@/lib/officeV3DashboardProjection";
 import { readOfficeV3DemoResultStore, type OfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import type { Activity as ActivityType, Agent as AgentType, PriorityTask, Prospect, Tone } from "@/types";
 import type { DemoStoredResult } from "@/types/demo";
@@ -74,13 +74,17 @@ function PriorityTasks({ onSelect, taskItems, demoCompleted, v3TaskIds }: { onSe
   </Panel>;
 }
 
-function FunnelAndProspects({ v3ProspectCard }: { v3ProspectCard?: ProspectCard | null }) {
+function FunnelAndProspects({ v3ProspectCard, v3PartnerCard }: { v3ProspectCard?: ProspectCard | null; v3PartnerCard?: PartnerCard | null }) {
   const [tab, setTab] = useState<"customer" | "bp">("customer");
   const labels = tab === "customer" ? ["開拓候補", "アプローチ済", "返信あり", "商談調整", "初回商談", "2回目商談", "案件獲得", "取引開始"] : ["開拓候補", "アプローチ済", "返信あり", "商談調整", "初回商談", "2回目商談", "情報交換", "取引開始"];
   const values = funnels[tab];
   const fixedProspects: Prospect[] = tab === "customer" ? prospects.filter(p => p.type.includes("顧客")) : prospects.filter(p => p.type.includes("BP"));
-  // V3 prospect cardは「顧客開拓」タブの先頭にのみ追加する。固定mock配列自体は変更しない。
-  const visibleProspects: Prospect[] = tab === "customer" && v3ProspectCard ? [v3ProspectCard, ...fixedProspects] : fixedProspects;
+  // V3 cardは該当タブの先頭にのみ追加する。固定mock配列自体は変更しない。
+  const visibleProspects: Prospect[] = tab === "customer" && v3ProspectCard
+    ? [v3ProspectCard, ...fixedProspects]
+    : tab === "bp" && v3PartnerCard
+      ? [v3PartnerCard, ...fixedProspects]
+      : fixedProspects;
   return <Panel title="新規開拓" subtitle="ファネルの停滞と、次に動かす企業だけを表示" action={<div className="tabs"><button className={tab === "customer" ? "active" : ""} onClick={() => setTab("customer")}>顧客開拓</button><button className={tab === "bp" ? "active" : ""} onClick={() => setTab("bp")}>BP開拓</button></div>}>
     <div className="funnel-horizontal">{values.map((value, i) => <div className="funnel-node" key={labels[i]}><span>{labels[i]}</span><strong>{value}</strong>{i < values.length - 1 && <i><ChevronRight size={14} /></i>}</div>)}</div>
     <div className="focus-row-head"><div><Target size={15} /><strong>今、対応すべき企業</strong></div><button className="text-button">新規開拓を開く <ArrowRight size={14} /></button></div>
@@ -143,7 +147,7 @@ export default function Dashboard() {
   const displayedSummaries = summaries.map(item => item.label === "新着案件" && demoResult ? { ...item, value: item.value + demoResult.newJobs, note: "デモ案件 +1" } : item.label === "提案中" && demoResult ? { ...item, value: item.value + demoResult.proposals, note: "提案準備完了 +1" } : item);
   const displayedTasks: PriorityTask[] = demoResult ? [{ id: 7, title: demoResult.priorityTasks?.[0] ?? "Java案件の提案送付", agent: demoResult.scenarioId === "contract-risk" ? "AIフォロー担当" : demoResult.scenarioId === "lost-knowledge" ? "AI分析担当" : "AI営業Mgr", priority: "高", deadline: "今すぐ", status: "未着手", category: demoResult.scenarioId === "contract-risk" ? "契約" : demoResult.scenarioId === "lost-knowledge" ? "分析" : "提案" }, ...tasks] : tasks;
   // completedAt降順（新しい結果が上）。V3結果同士の並びをscenario固定順にしない。
-  const v3ResultsSorted = [v3Store?.results.matching, v3Store?.results.newClient, v3Store?.results.recruiting]
+  const v3ResultsSorted = [v3Store?.results.matching, v3Store?.results.newClient, v3Store?.results.recruiting, v3Store?.results.bp]
     .filter((result): result is NonNullable<typeof result> => result != null)
     .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
   const v3Projections = v3ResultsSorted.map(projectV3DemoResultToDashboard);
@@ -153,9 +157,11 @@ export default function Dashboard() {
   const matchingProjection = v3Store?.results.matching ? projectV3DemoResultToDashboard(v3Store.results.matching) : null;
   const newClientProjection = v3Store?.results.newClient ? projectV3DemoResultToDashboard(v3Store.results.newClient) : null;
   const recruitingProjection = v3Store?.results.recruiting ? projectV3DemoResultToDashboard(v3Store.results.recruiting) : null;
+  const bpProjection = v3Store?.results.bp ? projectV3DemoResultToDashboard(v3Store.results.bp) : null;
   const v3PipelineCard = matchingProjection?.pipelineCard ?? null;
   const v3ProspectCard = newClientProjection?.prospectCard ?? null;
   const v3RecruitingCard = recruitingProjection?.recruitingCard ?? null;
+  const v3PartnerCard = bpProjection?.partnerCard ?? null;
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
   const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3Store(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
   const displayedLogs: ActivityType[] = v3Projections.length > 0 ? [...v3Projections.map(p => p.log), ...logs] : logs;
@@ -168,7 +174,7 @@ export default function Dashboard() {
     {v3Projections.length > 0 && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
     <div className="mini-summary"><div><span>採用選考中</span><strong>{today.recruit}<small>件</small></strong><em>書類選考 18件</em></div><div><span>稼働中要員</span><strong>{today.active}<small>名</small></strong><em>更新確認 12名</em></div><div className="attention"><span>要確認アラート</span><strong>7<small>件</small></strong><em>期限超過・停滞</em></div></div>
-    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskIds={v3TaskIds} /><FunnelAndProspects v3ProspectCard={v3ProspectCard} />{v3RecruitingCard && <RecruitingReview card={v3RecruitingCard} />}<AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
+    <PriorityTasks onSelect={setSelectedTask} taskItems={displayedTasksWithV3} demoCompleted={Boolean(demoResult)} v3TaskIds={v3TaskIds} /><FunnelAndProspects v3ProspectCard={v3ProspectCard} v3PartnerCard={v3PartnerCard} />{v3RecruitingCard && <RecruitingReview card={v3RecruitingCard} />}<AgentCards onSelect={setSelected} /><AttentionCards /><PipelineBoard v3Card={v3PipelineCard} />
     <ActivityLog logs={displayedLogs} onClearV3Result={v3Projections.length > 0 ? clearV3DemoResult : undefined} /><CommandPanel onExecute={execute} running={running} /><footer>SES AI Office Dashboard <span>•</span> モックデータ最終更新 18:30</footer>
   </main>{selected && <AgentModal agent={selected} onClose={() => setSelected(null)} />}{selectedTask && <TaskModal task={selectedTask} onClose={() => setSelectedTask(null)} />}{toast && <div className="toast" role="status"><Check size={17} />{toast}</div>}</div>;
 }
