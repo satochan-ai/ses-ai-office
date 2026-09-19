@@ -9,8 +9,8 @@ export type WorkItemSchemaVersion = 1;
 /** MVPで扱う業務種別。将来の種別追加はこのunionを拡張する。 */
 export type WorkItemKind = "opportunity_proposal";
 
-/** MVPは提案準備までで止まる（外部送信・CRM更新は行わない）。 */
-export type WorkItemMode = "prepare_only";
+/** Runtimeのデータ源。実行権限（prepare-only）はApproval側で管理する。 */
+export type WorkItemMode = "demo" | "real";
 
 export type WorkItemStatus =
   | "intake_received"

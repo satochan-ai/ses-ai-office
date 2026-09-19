@@ -103,7 +103,7 @@ function makeItem(status: WorkItemStatus = "intake_received", overrides: Partial
     approvalRequired: true,
     currentApprovalId: null,
     execution: { attempt: 1, lastAgentId: null, lastError: null, resumeStatus: null },
-    mode: "prepare_only",
+    mode: "demo",
     schemaVersion: 1,
     ...overrides,
   };

@@ -1,4 +1,4 @@
-import type { ActorRef, WorkItem, WorkItemStatus } from "@/types/workItem";
+import type { ActorRef, WorkItem, WorkItemMode, WorkItemStatus } from "@/types/workItem";
 
 export type ExecutionOperation = "intake" | "structure" | "search-candidates" | "assess-proposal-readiness" | "check-gaps" | "generate-draft" | "quality-check" | "request-approval" | "record-outcome" | "retry" | "manual-edit";
 export type ExecutionInputRef = { kind: "source" | "deliverable" | "master" | "evidence" | "human-input"; ref: string; version: string };
@@ -28,5 +28,5 @@ export type ExecutionLog = {
   humanEdit: HumanEditRecord | null;
   producedDeliverableId: string | null;
   producedEvidenceIds: string[];
-  mode: "demo" | "real";
+  mode: WorkItemMode;
 };
