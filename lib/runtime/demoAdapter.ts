@@ -1,5 +1,7 @@
 import type { OfficeV3DemoResult } from "@/types/officeV3ClaudeDemo";
 import type { Evidence, MissingInfo, NextAction, ProposalDecision, WorkItem, WorkItemKind } from "@/types/workItem";
+import type { DecisionQueue } from "@/types/decisionQueue";
+import { projectWorkItemsToDecisionQueue } from "@/lib/workItem/projection/dashboard";
 
 export type DemoAdapterOptions = {
   now: string;
@@ -62,4 +64,9 @@ export function demoResultToWorkItem(result: OfficeV3DemoResult, options: DemoAd
 
 export function demoResultsToWorkItems(results: OfficeV3DemoResult[], options: DemoAdapterOptions): WorkItem[] {
   return results.map((result, index) => demoResultToWorkItem(result, { ...options, createWorkItemId: item => options.createWorkItemId(item, index) }));
+}
+
+export function buildDecisionQueueFromDemoResults(results: OfficeV3DemoResult[], now: string): DecisionQueue {
+  const items = demoResultsToWorkItems(results, { now, createWorkItemId: result => `wi-demo-${result.scenarioId}` });
+  return projectWorkItemsToDecisionQueue(items, now);
 }

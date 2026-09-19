@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectWorkItemsToDecisionQueue } from "@/lib/workItem/projection/dashboard";
 import type { CandidateScreeningDemoResult, MatchingDemoResult, NewClientDemoResult, PartnerDemoResult } from "@/types/officeV3ClaudeDemo";
-import { demoResultToWorkItem, demoResultsToWorkItems } from "./demoAdapter";
+import { buildDecisionQueueFromDemoResults, demoResultToWorkItem, demoResultsToWorkItems } from "./demoAdapter";
 
 const common = { version: 2 as const, source: "office-v3-claude" as const, mock: true as const, scenarioTitle: "Demo", completedAt: "2026-09-19T10:00:00.000Z", finalAgentId: "agent-demo", finalAgentName: "Demo Agent", resultTitle: "準備完了", resultSummary: "Demo結果の要約" };
 const matching: MatchingDemoResult = { ...common, scenarioId: "matching-proposal", opportunityId: "opp-demo", opportunityTitle: "架空案件" };
@@ -34,4 +34,12 @@ describe("demoResultToWorkItem", () => {
     expect(first).toEqual(second); expect(JSON.stringify(matching)).toBe(before); expect(() => projectWorkItemsToDecisionQueue([first], options.now)).not.toThrow();
   });
   it("supports deterministic conversion of multiple results", () => { const items = demoResultsToWorkItems([matching, client, candidate, partner], options); expect(items).toHaveLength(4); expect(new Set(items.map(item => item.id)).size).toBe(4); });
+  it("builds an empty queue for no results and a demo queue for all four results", () => {
+    expect(buildDecisionQueueFromDemoResults([], options.now).cards).toHaveLength(0);
+    const queue = buildDecisionQueueFromDemoResults([matching, client, candidate, partner], options.now);
+    expect(queue.cards).toHaveLength(4); expect(queue.cards.every(card => card.isDemo)).toBe(true); expect(queue.cards.map(card => card.workItemId)).toEqual(["wi-demo-matching-proposal", "wi-demo-new-client-outreach", "wi-demo-candidate-screening", "wi-demo-bp-alliance"]);
+    const matchingCard = queue.cards.find(card => card.workItemId === "wi-demo-matching-proposal");
+    expect(matchingCard).toMatchObject({ bucket: "awaiting_human", severity: "warning", requiredHumanAction: "次の人間タスクを実行する" });
+    expect(matchingCard?.reasonSummary).toEqual(["提案経路が未確認", "開示範囲が未確認"]);
+  });
 });
