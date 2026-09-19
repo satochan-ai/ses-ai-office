@@ -1,4 +1,4 @@
-import type { Approval, ApprovalGuardedField, ApprovalInvalidation, ApprovalSnapshot } from "@/types/approval";
+import type { Approval, ApprovalGuardedField, ApprovalInvalidation, ApprovalSnapshot, ApprovalInvalidationReason } from "@/types/approval";
 import type { ActorRef, ProposalDecision } from "@/types/workItem";
 import type { ApprovalDecisionInput, ApprovalDecisionResult } from "@/types/approval";
 import { transition } from "./stateMachine";
@@ -57,4 +57,9 @@ export function decideApproval(input: ApprovalDecisionInput): ApprovalDecisionRe
   if (!result.ok) return { ok: false, code: "domain-rejected", message: result.error.message };
   const updatedApproval: Approval = { ...approval, state: decision === "approve" ? "approved" : "rejected", approver: actor, decidedBy: actor, decidedAt: issuedAt, decisionComment: decision === "reject" ? input.reason!.trim() : approval.decisionComment, rejectionReason: decision === "reject" ? input.reason!.trim() : null };
   return { ok: true, workItem: result.item, approval: updatedApproval };
+}
+
+export function invalidateApproval(approval: Approval, reason: ApprovalInvalidationReason, at: string, changedBy: ActorRef): Approval {
+  if (approval.state !== "pending") throw new Error("invalid-state");
+  return { ...approval, state: "invalidated", invalidation: { detectedAt: at, changedFields: [], previousHash: approval.targetDecisionSnapshotHash, currentHash: approval.targetDecisionSnapshotHash, changedBy }, decisionComment: reason };
 }
