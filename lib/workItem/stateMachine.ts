@@ -8,6 +8,7 @@ import type {
   WorkItemRelations,
   WorkItemStatus,
 } from "@/types/workItem";
+import type { ApprovalInvalidationReason } from "@/types/approval";
 
 /**
  * Work Itemの状態遷移を担う純粋関数群。
@@ -113,7 +114,7 @@ export type DomainEffect =
       type: "invalidate-approval";
       workItemId: string;
       approvalId: string;
-      reason: "deliverable_changed" | "expired" | "cancelled" | "superseded";
+      reason: ApprovalInvalidationReason;
     }
   | { type: "request-human-input"; workItemId: string; status: ParkStatus }
   | {

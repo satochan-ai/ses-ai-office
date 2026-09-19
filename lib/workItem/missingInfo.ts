@@ -1,6 +1,7 @@
 import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
 import type { Evidence, ProposalDecision, WorkItem } from "@/types/workItem";
 import type { DomainEffect } from "./stateMachine";
+import { hashDecisionSnapshot } from "./approval";
 
 export type ResolveMissingInfoInput = { workItem: WorkItem; missingInfoId: string; actorId: string; resolvedAt: string; value: MissingInfoResolutionValue };
 export type ResolveMissingInfoResult =
@@ -44,6 +45,7 @@ export function resolveMissingInfo(input: ResolveMissingInfoInput): ResolveMissi
   });
   const updated: WorkItem = { ...input.workItem, updatedAt: input.resolvedAt, missingInfo, evidenceIds: [...input.workItem.evidenceIds, evidenceId], proposalDecisions };
   const effects: DomainEffect[] = [{ type: "record-execution", workItemId: input.workItem.id, from: input.workItem.status, to: updated.status, trigger: "human-input-provided", at: input.resolvedAt, actorId: input.actorId, detail: `resolved:${info.id}` }];
-  if (input.workItem.currentApprovalId && JSON.stringify(target) !== JSON.stringify(proposalDecisions.find(decision => decision.opportunityId === target.opportunityId && decision.personId === target.personId))) effects.push({ type: "invalidate-approval", workItemId: input.workItem.id, approvalId: input.workItem.currentApprovalId, reason: "deliverable_changed" });
+  const updatedTarget = proposalDecisions.find(decision => decision.opportunityId === target.opportunityId && decision.personId === target.personId);
+  if (input.workItem.currentApprovalId && updatedTarget && hashDecisionSnapshot(target) !== hashDecisionSnapshot(updatedTarget)) effects.push({ type: "invalidate-approval", workItemId: input.workItem.id, approvalId: input.workItem.currentApprovalId, reason: "proposal_decision_changed" });
   return { ok: true, workItem: updated, resolvedMissingInfoId: info.id, evidenceId, evidence, effects };
 }

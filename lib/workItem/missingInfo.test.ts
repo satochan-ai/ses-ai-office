@@ -33,6 +33,13 @@ describe("missing info resolution domain", () => {
   });
   it("emits approval invalidation when a current approval exists", () => {
     const result = resolveMissingInfo({ ...base, workItem: make("personIntent", { currentApprovalId: "ap1" }), missingInfoId: "m", value: { field: "personIntent", status: "confirmed" } });
-    expect(result).toMatchObject({ ok: true, effects: [{ type: "record-execution" }, { type: "invalidate-approval", approvalId: "ap1" }] });
+    expect(result).toMatchObject({ ok: true, effects: [{ type: "record-execution" }, { type: "invalidate-approval", approvalId: "ap1", reason: "proposal_decision_changed" }] });
+  });
+  it("does not invalidate when the decision snapshot is unchanged or approval is absent", () => {
+    const unchanged = resolveMissingInfo({ ...base, workItem: make("informationFreshness", { currentApprovalId: "ap1", proposalDecisions: [decision({ routeStatus: "unknown" })] }), missingInfoId: "m", value: { field: "informationFreshness" } });
+    expect(unchanged).toMatchObject({ ok: true, effects: [{ type: "record-execution" }] });
+    if (unchanged.ok) expect(unchanged.effects.some(effect => effect.type === "invalidate-approval")).toBe(false);
+    const noApproval = resolveMissingInfo({ ...base, workItem: make("personIntent"), missingInfoId: "m", value: { field: "personIntent", status: "confirmed" } });
+    if (noApproval.ok) expect(noApproval.effects.some(effect => effect.type === "invalidate-approval")).toBe(false);
   });
 });
