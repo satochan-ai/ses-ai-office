@@ -10,6 +10,7 @@ const BUCKETS: DecisionQueueBucket[] = ["needs_decision_today", "awaiting_approv
 
 const isBlocker = (status: string) => status === "open";
 const blockerMissing = (item: WorkItem) => item.proposalDecisions.flatMap(d => d.blockerMissingInfoIds).filter(id => isBlocker(item.missingInfo.find(info => info.id === id)?.status ?? "open"));
+const unresolvedMissing = (item: WorkItem) => item.missingInfo.filter(info => isBlocker(info.status));
 const blockerConflicts = (item: WorkItem) => item.proposalDecisions.flatMap(d => d.blockerConflictIds).filter(id => isBlocker(item.conflicts.find(info => info.id === id)?.status ?? "open"));
 const failed = (item: WorkItem) => item.status === "failed_intake" || item.status === "failed_execution" || (item.execution as WorkItem["execution"] & { state?: string }).state === "failed";
 
@@ -25,11 +26,11 @@ function chooseDecision(item: WorkItem): ProposalDecisionSummary | null {
   if (!d) return null;
   return { verdict: d.verdict, readiness: d.readiness, routeStatus: d.routeStatus, intentStatus: d.intentStatus, duplicateStatus: d.duplicateStatus, startDateStatus: d.startDateStatus, disclosureStatus: d.disclosureStatus };
 }
-function primaryBucket(item: WorkItem, now: string, missingCount: number): DecisionQueueBucket | null {
+function primaryBucket(item: WorkItem, now: string, missingCount: number, decision: ProposalDecisionSummary | null): DecisionQueueBucket | null {
   if (failed(item)) return "execution_failed";
   if (overdue(item, now)) return "overdue";
   if (item.status === "awaiting_approval" || item.status === "approval_invalidated") return "awaiting_approval";
-  if (item.status === "blocked_missing_info" || (item.status === "info_gap_check" && missingCount > 0) || item.status === "blocked_conflict") return "missing_info";
+  if (item.status === "blocked_missing_info" || (item.status === "info_gap_check" && missingCount > 0) || item.status === "blocked_conflict" || (decision?.readiness === "blocked" && missingCount > 0)) return "missing_info";
   if (!TERMINAL.has(item.status) && item.nextAction?.ownerType === "human") return "awaiting_human";
   return null;
 }
@@ -38,7 +39,15 @@ function severity(item: WorkItem, now: string, decision: ProposalDecisionSummary
   if (missingCount > 0 || decision?.duplicateStatus === "possible" || decision?.intentStatus === "stale" || decision?.routeStatus === "unknown" || decision?.startDateStatus === "unknown" || decision?.disclosureStatus === "unknown") return "warning";
   return "normal";
 }
-function reasons(item: WorkItem, now: string, decision: ProposalDecisionSummary | null, missingCount: number, conflictCount: number): string[] {
+const MISSING_REASON: Record<string, string> = {
+  proposalRoute: "提案経路が未確認",
+  personIntent: "本人意向が未確認",
+  availabilityStart: "稼働開始日が未確認",
+  informationFreshness: "情報の鮮度を確認する必要があります",
+  duplicateProposal: "重複提案の確認が必要",
+  disclosureScope: "開示範囲が未確認",
+};
+function reasons(item: WorkItem, now: string, decision: ProposalDecisionSummary | null, missingCount: number, conflictCount: number, missing: WorkItem["missingInfo"]): string[] {
   const out: string[] = [];
   if (failed(item)) out.push("実行失敗を確認");
   if (item.dueAt !== null && item.dueAt < now) out.push("期限超過");
@@ -53,6 +62,10 @@ function reasons(item: WorkItem, now: string, decision: ProposalDecisionSummary 
   if (decision?.routeStatus === "conflict") out.push("提案経路が矛盾");
   if (decision?.startDateStatus === "mismatched") out.push("開始日が不一致");
   if (decision?.disclosureStatus === "unknown") out.push("開示範囲が未確認");
+  const fields = new Set(missing.map(info => info.field));
+  for (const field of ["proposalRoute", "personIntent", "availabilityStart", "informationFreshness", "duplicateProposal", "disclosureScope"] as const) {
+    if (fields.has(field)) out.push(MISSING_REASON[field]);
+  }
   if (item.evidenceIds.length === 0) out.push("Evidenceが不足");
   return [...new Set(out)];
 }
@@ -62,20 +75,21 @@ function humanAction(item: WorkItem, bucket: DecisionQueueBucket, decision: Prop
   if (item.status === "approval_invalidated") return "提案判断を再確認して再承認する";
   if (bucket === "awaiting_approval") return "提案内容を承認する";
   if (bucket === "missing_info") return decision?.routeStatus === "conflict" || decision?.startDateStatus === "mismatched" ? "条件矛盾を解消する" : "不足情報を確認する";
-  if (bucket === "awaiting_human") return "次の人間タスクを実行する";
+  if (bucket === "awaiting_human" && item.nextAction?.ownerType === "human") return item.nextAction.label ?? "次の人間タスクを実行する";
   return null;
 }
 
 export function projectWorkItemToDecisionCard(item: WorkItem, now: string): DecisionCard | null {
   if (TERMINAL.has(item.status)) return null;
   const missing = blockerMissing(item);
+  const unresolved = unresolvedMissing(item);
   const conflicts = blockerConflicts(item);
-  const bucket = primaryBucket(item, now, missing.length);
-  if (!bucket) return null;
   const proposalDecision = chooseDecision(item);
+  const bucket = primaryBucket(item, now, unresolved.length, proposalDecision);
+  if (!bucket) return null;
   const overdueFlag = overdue(item, now);
   const isToday = (item.dueAt !== null && sameOrBeforeDay(item.dueAt, now)) || severity(item, now, proposalDecision, missing.length, conflicts.length) === "critical" || overdueFlag || failed(item);
-  const reasonSummary = reasons(item, now, proposalDecision, missing.length, conflicts.length);
+  const reasonSummary = reasons(item, now, proposalDecision, missing.length, conflicts.length, unresolved);
   return {
     workItemId: item.id, kind: item.kind, title: item.relations.opportunityIds[0] ? `案件 ${item.relations.opportunityIds[0]}` : `Work Item ${item.id}`, bucket,
     status: item.status, statusLabel: STATUS_LABEL[item.status] ?? item.status, assignedAgentId: item.assignedAgentId, assignedHumanId: item.assignedHumanId,

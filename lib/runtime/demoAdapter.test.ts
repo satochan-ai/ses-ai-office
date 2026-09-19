@@ -39,7 +39,7 @@ describe("demoResultToWorkItem", () => {
     const queue = buildDecisionQueueFromDemoResults([matching, client, candidate, partner], options.now);
     expect(queue.cards).toHaveLength(4); expect(queue.cards.every(card => card.isDemo)).toBe(true); expect(queue.cards.map(card => card.workItemId)).toEqual(["wi-demo-matching-proposal", "wi-demo-new-client-outreach", "wi-demo-candidate-screening", "wi-demo-bp-alliance"]);
     const matchingCard = queue.cards.find(card => card.workItemId === "wi-demo-matching-proposal");
-    expect(matchingCard).toMatchObject({ bucket: "awaiting_human", severity: "warning", requiredHumanAction: "次の人間タスクを実行する" });
-    expect(matchingCard?.reasonSummary).toEqual(["提案経路が未確認", "開示範囲が未確認"]);
+    expect(matchingCard).toMatchObject({ bucket: "missing_info", severity: "warning", requiredHumanAction: "不足情報を確認する" });
+    expect(matchingCard?.reasonSummary).toEqual(expect.arrayContaining(["提案経路が未確認", "本人意向が未確認", "稼働開始日が未確認", "情報の鮮度を確認する必要があります", "重複提案の確認が必要", "開示範囲が未確認"]));
   });
 });
