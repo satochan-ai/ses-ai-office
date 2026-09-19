@@ -17,6 +17,9 @@ import { readOfficeV3DemoResultStore, type OfficeV3DemoResultStore } from "@/lib
 import type { Activity as ActivityType, Agent as AgentType, PriorityTask, Prospect, Tone } from "@/types";
 import type { DemoStoredResult } from "@/types/demo";
 import { DEMO_STORAGE_KEY } from "@/data/demoScenario";
+import DecisionQueuePanel from "@/components/dashboard/DecisionQueuePanel";
+import { WORK_ITEM_DECISION_QUEUE_DEMO_NOW, workItemDecisionQueueDemo } from "@/data/workItemDecisionQueueDemo";
+import { projectWorkItemsToDecisionQueue } from "@/lib/workItem/projection/dashboard";
 
 const icons = [Target, CalendarCheck, BriefcaseBusiness, Send, MessageSquareText];
 const menuItems = [
@@ -165,11 +168,13 @@ export default function Dashboard() {
   const resetDemo = () => { sessionStorage.removeItem(DEMO_STORAGE_KEY); setDemoResult(null); setLogs(initialActivities); setToast("デモ結果をリセットしました"); };
   const clearV3DemoResult = () => { try { sessionStorage.removeItem(OFFICE_V3_CLAUDE_DEMO_RESULT_STORAGE_KEY); setV3Store(null); } catch { setToast("V3デモ結果をクリアできませんでした"); } };
   const displayedLogs: ActivityType[] = v3Projections.length > 0 ? [...v3Projections.map(p => p.log), ...logs] : logs;
+  const decisionQueue = projectWorkItemsToDecisionQueue(workItemDecisionQueueDemo, WORK_ITEM_DECISION_QUEUE_DEMO_NOW);
   const execute = (text: string, agent: string) => { if (executeTimer.current !== null) window.clearTimeout(executeTimer.current); setRunning(true); setToast("AI社員に指示を送信しました"); setLogs(prev => [{ time: "18:30", agent, action: `一括指示を受付：${text.slice(0, 22)}…`, status: "処理中" }, ...prev]); executeTimer.current = window.setTimeout(() => { setRunning(false); setToast("優先アクションの整理が完了しました"); setLogs(prev => prev.map((l, i) => i === 0 ? { ...l, status: "完了" } : l)); executeTimer.current = null; }, 1600); };
   useEffect(() => () => { if (executeTimer.current !== null) window.clearTimeout(executeTimer.current); }, []);
   useEffect(() => { if (!toast) return; const id = window.setTimeout(() => setToast(""), 3000); return () => window.clearTimeout(id); }, [toast]);
   return <div className="app-shell"><Header onMenu={() => setSidebar(true)} /><Sidebar open={sidebar} onClose={() => setSidebar(false)} /><main>
     <div className="page-intro"><div><p><span className="pulse" />AI営業チームは正常に稼働しています</p><h1>おはようございます、さとちゃんさん</h1><span>今日の判断に必要な情報だけをまとめました。</span></div><button><Search size={16} />企業・案件・要員を検索 <kbd>⌘ K</kbd></button></div>
+    <DecisionQueuePanel queue={decisionQueue} />
     {demoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>{demoResult.scenarioTitle ?? "Java案件の提案準備が完了"}</strong> {demoResult.dashboardSummary ?? "新着案件 +1 ・ 提案候補 +3 ・ 提案中 +1"}</span></div><button onClick={resetDemo}>デモ結果をリセット</button></div>}
     {v3Projections.length > 0 && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>
