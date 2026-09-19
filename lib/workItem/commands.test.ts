@@ -31,9 +31,9 @@ describe("human work item commands", () => {
   });
   it("reports unsupported domain capabilities safely", () => {
     expect(executeWorkItemCommand({ ...base, type: "return-for-rework", commandId: "c1", reason: "修正" }, context())).toMatchObject({ ok: false, code: "unsupported-domain-operation" });
-    expect(executeWorkItemCommand({ ...base, type: "provide-missing-info", commandId: "c2", missingInfoId: "unknown", value: "value" }, context())).toMatchObject({ ok: false, code: "missing-info-not-found" });
-    expect(executeWorkItemCommand({ ...base, type: "provide-missing-info", commandId: "c3", missingInfoId: "m1", value: "value" }, context({ missingInfo: [{ id: "m1", workItemId: "w1", field: "personIntent", subjectPersonId: null, question: "?", status: "open", raisedAt: base.issuedAt, resolvedAt: null }] }))).toMatchObject({ ok: false, code: "unsupported-domain-operation" });
-    expect(executeWorkItemCommand({ ...base, type: "provide-missing-info", commandId: "c4", missingInfoId: "m1", value: " " }, context())).toMatchObject({ ok: false, code: "invalid-command" });
+    expect(executeWorkItemCommand({ ...base, type: "provide-missing-info", commandId: "c2", missingInfoId: "unknown", value: { field: "personIntent", status: "confirmed" } }, context())).toMatchObject({ ok: false, code: "missing-info-not-found" });
+    expect(executeWorkItemCommand({ ...base, type: "provide-missing-info", commandId: "c3", missingInfoId: "m1", value: { field: "personIntent", status: "confirmed" } }, context({ proposalDecisions: [decision], missingInfo: [{ id: "m1", workItemId: "w1", field: "personIntent", subjectPersonId: null, question: "?", status: "open", raisedAt: base.issuedAt, resolvedAt: null }] }))).toMatchObject({ ok: true, data: { evidenceId: "evidence:missing-info:m1:2026-09-19T12:00:00.000Z" } });
+    expect(executeWorkItemCommand({ ...base, type: "provide-missing-info", commandId: "c4", missingInfoId: "m1", value: { field: "availabilityStart", status: "matched" } }, context({ missingInfo: [{ id: "m1", workItemId: "w1", field: "availabilityStart", subjectPersonId: null, question: "?", status: "open", raisedAt: base.issuedAt, resolvedAt: null }] }))).toMatchObject({ ok: false, code: "invalid-command" });
   });
   it("does not mutate command context and works for real mode", () => {
     const ctx = context({ mode: "real" }); const before = JSON.stringify(ctx);

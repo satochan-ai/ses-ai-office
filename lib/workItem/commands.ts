@@ -1,6 +1,7 @@
 import type { Approval } from "@/types/approval";
 import type { ExecuteWorkItemCommandContext, WorkItemCommand, WorkItemCommandErrorCode, WorkItemCommandResult } from "@/types/workItemCommand";
 import { decideApproval } from "./approval";
+import { resolveMissingInfo } from "./missingInfo";
 
 function error(commandId: string, code: WorkItemCommandErrorCode, message: string): WorkItemCommandResult { return { ok: false, commandId, code, message }; }
 function approvalFor(context: ExecuteWorkItemCommandContext, approvalId: string, commandId: string): Approval | WorkItemCommandResult {
@@ -33,8 +34,10 @@ export function executeWorkItemCommand(command: WorkItemCommand, context: Execut
     case "return-for-rework":
       return command.reason.trim() ? error(command.commandId, "unsupported-domain-operation", "Return for rework is not available as a standalone domain operation.") : error(command.commandId, "missing-reason", "Rework reason is required.");
     case "provide-missing-info":
-      if (!command.value.trim()) return error(command.commandId, "invalid-command", "Missing information value is required.");
-      if (!context.workItem.missingInfo.some(info => info.id === command.missingInfoId)) return error(command.commandId, "missing-info-not-found", "Missing information was not found.");
-      return error(command.commandId, "unsupported-domain-operation", "Missing information resolution is not available as a domain operation.");
+      {
+        const result = resolveMissingInfo({ workItem: context.workItem, missingInfoId: command.missingInfoId, actorId: command.actorId, resolvedAt: command.issuedAt, value: command.value });
+        if (!result.ok) return error(command.commandId, result.code === "invalid-resolution" ? "invalid-command" : result.code === "proposal-decision-not-found" || result.code === "unsupported-missing-info-field" ? "domain-rejected" : result.code, result.message);
+        return { ok: true, commandId: command.commandId, workItem: result.workItem, data: { evidenceId: result.evidenceId, evidence: result.evidence, effects: result.effects } };
+      }
   }
 }

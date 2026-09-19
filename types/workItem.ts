@@ -145,6 +145,8 @@ export type MissingInfo = {
   status: InfoStatus;
   raisedAt: string;
   resolvedAt: string | null;
+  resolvedBy?: ActorRef | null;
+  resolution?: string | null;
 };
 
 export type KnownConflictKind =
