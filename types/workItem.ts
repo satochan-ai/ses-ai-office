@@ -7,7 +7,13 @@
 export type WorkItemSchemaVersion = 1;
 
 /** MVPで扱う業務種別。将来の種別追加はこのunionを拡張する。 */
-export type WorkItemKind = "opportunity_proposal";
+export type WorkItemKind =
+  | "opportunity_proposal"
+  | "matching-proposal"
+  | "new-client-outreach"
+  | "candidate-screening"
+  | "bp-alliance"
+  | "engineer-follow";
 
 /** Runtimeのデータ源。実行権限（prepare-only）はApproval側で管理する。 */
 export type WorkItemMode = "demo" | "real";
@@ -40,7 +46,7 @@ export type ActorRef = {
   id: string;
 };
 
-export type WorkItemSourceType = "email" | "chat" | "document" | "manual";
+export type WorkItemSourceType = "email" | "chat" | "document" | "manual" | "demo-seed";
 
 export type WorkItemSource = {
   type: WorkItemSourceType;
@@ -52,6 +58,8 @@ export type WorkItemRelations = {
   opportunityIds: string[];
   /** 候補人材。candidate_search完了時にここが空だとblocked_no_candidateになる。 */
   personIds: string[];
+  partnerIds: string[];
+  clientIds: string[];
   companyIds: string[];
   parentWorkItemId: string | null;
   supersededByWorkItemId: string | null;
@@ -67,6 +75,11 @@ export type NextActionKind =
 export type NextAction = {
   kind: NextActionKind;
   ownerType: "agent" | "human" | "system";
+  /** Adapter/UI表示用の決定論的な補足。既存Domainのkind/ownerTypeは維持する。 */
+  actor?: "ai" | "human";
+  label?: string;
+  agentId?: string;
+  dueAt?: string | null;
 };
 
 export type ExecutionError = {

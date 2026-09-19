@@ -88,6 +88,8 @@ function makeItem(status: WorkItemStatus = "intake_received", overrides: Partial
     relations: {
       opportunityIds: ["opp-1"],
       personIds: [],
+      partnerIds: [],
+      clientIds: [],
       companyIds: [],
       parentWorkItemId: null,
       supersededByWorkItemId: null,
@@ -115,6 +117,8 @@ function makeGateItem(decision: Partial<ProposalDecision> = {}, overrides: Parti
     relations: {
       opportunityIds: ["opp-1"],
       personIds: ["person-1"],
+      partnerIds: [],
+      clientIds: [],
       companyIds: [],
       parentWorkItemId: null,
       supersededByWorkItemId: null,
@@ -175,6 +179,23 @@ describe("status vocabulary", () => {
     for (const status of WORK_ITEM_STATUSES) {
       expect(status).not.toMatch(/sent|send|crm|delivered/);
     }
+  });
+});
+
+describe("Step4.5 domain vocabulary", () => {
+  it("supports adapter result kinds, demo sources, relations, and display actions", () => {
+    const kinds = ["matching-proposal", "new-client-outreach", "candidate-screening", "bp-alliance", "engineer-follow"] as const;
+    expect(kinds).toHaveLength(5);
+    const item = makeItem("needs_human_input", {
+      kind: "bp-alliance",
+      source: { type: "demo-seed", ref: "demo-result-1" },
+      relations: { ...makeItem().relations, opportunityIds: [], personIds: ["person-1"], partnerIds: ["partner-1"], clientIds: ["client-1"] },
+      nextAction: { kind: "provide_human_input", ownerType: "human", actor: "human", label: "BP対応を確認する", agentId: "bp-agent", dueAt: null },
+    });
+    expect(item.source.type).toBe("demo-seed");
+    expect(item.relations.partnerIds).toEqual(["partner-1"]);
+    expect(item.relations.clientIds).toEqual(["client-1"]);
+    expect(item.nextAction?.label).toBe("BP対応を確認する");
   });
 });
 
