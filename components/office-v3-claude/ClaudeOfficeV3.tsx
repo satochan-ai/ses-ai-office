@@ -11,6 +11,10 @@ import { v3Layout2f } from "@/data/officeV3ClaudeLayout.2f";
 import { v3Layout3f } from "@/data/officeV3ClaudeLayout.3f";
 import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
+import { readOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
+import { demoResultsToWorkItems } from "@/lib/runtime/demoAdapter";
+import { projectAgentWorkload } from "@/lib/workItem/projection/agentWorkload";
+import type { WorkItem } from "@/types/workItem";
 import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
 import BuildingOverview from "./BuildingOverview";
@@ -39,7 +43,15 @@ export default function ClaudeOfficeV3() {
   // floor（組織上の階）と area（1枚の物理フロア内のズーム）は完全に別state。統合しない。
   const [floorView, setFloorView] = useState<V3FloorView>("all");
   const [compact, setCompact] = useState(false);
+  const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const demo = useOfficeV3ClaudeDemo();
+
+  useEffect(() => {
+    const store = readOfficeV3DemoResultStore();
+    const results = store ? Object.values(store.results).filter((result): result is NonNullable<typeof result> => result !== undefined) : [];
+    const now = new Date().toISOString();
+    setWorkItems(demoResultsToWorkItems(results, { now, createWorkItemId: result => `wi-demo-${result.scenarioId}` }));
+  }, []);
 
   // ビューポートが正方形寄り（モバイル）かどうかだけを見る。リスナーは1つ。
   useEffect(() => {
@@ -99,6 +111,7 @@ export default function ClaudeOfficeV3() {
   }, [views]);
 
   const selected = views.find(view => view.placement.agentId === selectedId) ?? null;
+  const selectedWorkload = selected ? projectAgentWorkload(workItems, selected.placement.agentId, new Date().toISOString()) : undefined;
   const isHumanSeatSelected = selectedId === HUMAN_SEAT_ID;
   const close = useCallback(() => setSelectedId(null), []);
   const select = useCallback((agentId: string) => setSelectedId(current => (current === agentId ? null : agentId)), []);
@@ -223,7 +236,7 @@ export default function ClaudeOfficeV3() {
             />
           </div>
           {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} />
+            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} />
           ) : isHumanSeatSelected ? (
             <HumanSeatPanel
               seat={v3HumanSeat}

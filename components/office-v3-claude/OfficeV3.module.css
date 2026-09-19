@@ -1344,6 +1344,81 @@
   to { stroke-dashoffset: -18; }
 }
 
+.workloadSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 8px;
+  color: var(--v3-muted);
+  font-size: 11px;
+}
+
+.workloadSummary span {
+  border: 1px solid var(--v3-line);
+  border-radius: 999px;
+  padding: 3px 7px;
+}
+
+.workloadList {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workloadItem {
+  position: relative;
+  border: 1px solid var(--v3-line);
+  border-radius: 9px;
+  padding: 7px 8px;
+  overflow-wrap: anywhere;
+}
+
+.workloadMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--v3-ink);
+  font-size: 11px;
+}
+
+.workloadMeta span,
+.workloadItem small,
+.workloadEmpty,
+.workloadMore {
+  color: var(--v3-muted);
+  font-size: 10px;
+}
+
+.workloadItem p {
+  margin: 4px 0 0;
+  color: var(--v3-muted);
+  font-size: 10px;
+}
+
+.workloadItem small {
+  display: block;
+  margin-top: 4px;
+  color: #f0c782;
+}
+
+.workloadDemo {
+  display: inline-block;
+  margin-top: 4px;
+  border: 1px solid rgba(99, 193, 199, 0.55);
+  border-radius: 4px;
+  padding: 1px 4px;
+  color: #a9e3e5;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.workloadEmpty,
+.workloadMore {
+  margin: 6px 0 0;
+}
+
 @keyframes v3-demo-handoff {
   0% { opacity: 0; stroke-dashoffset: 18; }
   16%, 76% { opacity: 0.78; }

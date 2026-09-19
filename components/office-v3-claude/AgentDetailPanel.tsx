@@ -3,9 +3,10 @@
 import { useEffect, useRef } from "react";
 import { CheckCircle2, Monitor, X } from "lucide-react";
 import type { V3AgentView } from "@/types/officeV3Claude";
+import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import s from "./OfficeV3.module.css";
 
-export default function AgentDetailPanel({ view, onClose }: { view: V3AgentView; onClose: () => void }) {
+export default function AgentDetailPanel({ view, onClose, workload }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +64,34 @@ export default function AgentDetailPanel({ view, onClose }: { view: V3AgentView;
         </strong>
         <small>{view.currentTask}</small>
       </div>
+
+      {workload ? (
+        <section>
+          <h3>現在の仕事</h3>
+          <div className={s.workloadSummary}>
+            <span>担当中 {workload.total}件</span>
+            <span>人間判断待ち {workload.needsHumanDecision}件</span>
+          </div>
+          {workload.items.length === 0 ? (
+            <p className={s.workloadEmpty}>現在担当しているWorkItemはありません</p>
+          ) : (
+            <ul className={s.workloadList}>
+              {workload.items.map(item => (
+                <li key={item.id} className={s.workloadItem}>
+                  <div className={s.workloadMeta}>
+                    <strong>{item.kindLabel}</strong>
+                    <span>{item.statusLabel}</span>
+                  </div>
+                  <p>{item.nextAction}</p>
+                  {item.needsHumanDecision ? <small>人間判断待ち</small> : null}
+                  {item.isDemo ? <em className={s.workloadDemo}>Demo</em> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          {workload.total > workload.items.length ? <p className={s.workloadMore}>ほか{workload.total - workload.items.length}件</p> : null}
+        </section>
+      ) : null}
 
       <section>
         <h3>担当業務</h3>
