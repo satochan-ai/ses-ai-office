@@ -2,6 +2,7 @@ import type { Approval } from "@/types/approval";
 import type { ExecuteWorkItemCommandContext, WorkItemCommand, WorkItemCommandErrorCode, WorkItemCommandResult } from "@/types/workItemCommand";
 import { decideApproval } from "./approval";
 import { resolveMissingInfo } from "./missingInfo";
+import { returnWorkItemForRework } from "./rework";
 
 function error(commandId: string, code: WorkItemCommandErrorCode, message: string): WorkItemCommandResult { return { ok: false, commandId, code, message }; }
 function approvalFor(context: ExecuteWorkItemCommandContext, approvalId: string, commandId: string): Approval | WorkItemCommandResult {
@@ -32,7 +33,11 @@ export function executeWorkItemCommand(command: WorkItemCommand, context: Execut
       return "ok" in approval ? approval : applyDecision(command, context, approval, "reject", command.reason);
     }
     case "return-for-rework":
-      return command.reason.trim() ? error(command.commandId, "unsupported-domain-operation", "Return for rework is not available as a standalone domain operation.") : error(command.commandId, "missing-reason", "Rework reason is required.");
+      {
+        const result = returnWorkItemForRework({ workItem: context.workItem, actorId: command.actorId, returnedAt: command.issuedAt, reason: command.reason });
+        if (!result.ok) return error(command.commandId, result.code, result.message);
+        return { ok: true, commandId: command.commandId, workItem: result.workItem, data: { effects: result.effects } };
+      }
     case "provide-missing-info":
       {
         const result = resolveMissingInfo({ workItem: context.workItem, missingInfoId: command.missingInfoId, actorId: command.actorId, resolvedAt: command.issuedAt, value: command.value });

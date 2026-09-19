@@ -83,6 +83,7 @@ export type HumanRejectedTrigger = {
   approvalId: string;
   reason?: string;
 };
+export type HumanReturnedForReworkTrigger = { type: "human-returned-for-rework"; at: string; humanId: string; reason: string };
 export type HumanInputProvidedTrigger = {
   type: "human-input-provided";
   at: string;
@@ -100,6 +101,7 @@ export type TransitionTrigger =
   | AgentFailedTrigger
   | HumanApprovedTrigger
   | HumanRejectedTrigger
+  | HumanReturnedForReworkTrigger
   | HumanInputProvidedTrigger
   | ApprovalExpiredTrigger
   | DeliverableChangedTrigger
@@ -349,6 +351,7 @@ function actorOf(trigger: TransitionTrigger): string | null {
   switch (trigger.type) {
     case "human-approved":
     case "human-rejected":
+    case "human-returned-for-rework":
     case "human-input-provided":
       return trigger.humanId;
     case "agent-completed":
@@ -582,6 +585,12 @@ function onHumanRejected(item: WorkItem, trigger: HumanRejectedTrigger): Transit
   return commit(item, trigger, { to: "returned_for_rework", set: { currentApprovalId: null }, detail: trigger.reason });
 }
 
+function onHumanReturnedForRework(item: WorkItem, trigger: HumanReturnedForReworkTrigger): TransitionResult {
+  if (!(item.status === "quality_check" || item.status === "awaiting_approval" || item.status === "preparation_recorded")) return invalidTransition(item, trigger);
+  const effects: DomainEffect[] = item.currentApprovalId === null ? [] : [{ type: "invalidate-approval", workItemId: item.id, approvalId: item.currentApprovalId, reason: "returned_for_rework" }];
+  return commit(item, trigger, { to: "returned_for_rework", set: { currentApprovalId: null, reworkInfo: { reason: trigger.reason.trim(), returnedAt: trigger.at, returnedBy: trigger.humanId } }, effects, detail: trigger.reason.trim() });
+}
+
 const DEFAULT_RESUME_STATUS: Partial<Record<WorkItemStatus, WorkItemStatus>> = {
   blocked_missing_info: "info_gap_check",
   blocked_conflict: "info_gap_check",
@@ -734,6 +743,8 @@ export function transition(item: WorkItem, trigger: TransitionTrigger): Transiti
       return onHumanApproved(item, trigger);
     case "human-rejected":
       return onHumanRejected(item, trigger);
+    case "human-returned-for-rework":
+      return onHumanReturnedForRework(item, trigger);
     case "human-input-provided":
       return onHumanInputProvided(item, trigger);
     case "approval-expired":

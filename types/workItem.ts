@@ -221,6 +221,7 @@ export type WorkItem = {
   /** MVPでは常にtrue（人間承認を省略する経路は設計しない）。 */
   approvalRequired: true;
   currentApprovalId: string | null;
+  reworkInfo?: { reason: string; returnedAt: string; returnedBy: string } | null;
   execution: WorkItemExecution;
   mode: WorkItemMode;
   schemaVersion: WorkItemSchemaVersion;

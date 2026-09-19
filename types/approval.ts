@@ -1,7 +1,7 @@
 import type { ActorRef, ProposalDecision, WorkItem } from "@/types/workItem";
 
 export type ApprovalState = "pending" | "approved" | "rejected" | "on_hold" | "expired" | "invalidated" | "withdrawn";
-export type ApprovalInvalidationReason = "deliverable_changed" | "proposal_decision_changed" | "expired" | "cancelled" | "superseded";
+export type ApprovalInvalidationReason = "deliverable_changed" | "proposal_decision_changed" | "returned_for_rework" | "expired" | "cancelled" | "superseded";
 export type ApprovalPermit = "prepare-only" | "send-external" | "register-record";
 
 export type ApprovalGuardedField =
