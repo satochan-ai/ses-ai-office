@@ -1,5 +1,7 @@
 import type { Approval, ApprovalGuardedField, ApprovalInvalidation, ApprovalSnapshot } from "@/types/approval";
 import type { ActorRef, ProposalDecision } from "@/types/workItem";
+import type { ApprovalDecisionInput, ApprovalDecisionResult } from "@/types/approval";
+import { transition } from "./stateMachine";
 
 const FIELDS: ApprovalGuardedField[] = ["body", "subject", "rate", "recipients", "attachments", "disclosedFields", "personIds", "proposalRoute", "personIntent", "availabilityStart", "duplicateProposalStatus", "disclosureScope", "decisionEvidence"];
 
@@ -21,9 +23,9 @@ export function normalizeDecision(decision: ProposalDecision): string {
 
 export function hashDecisionSnapshot(decision: ProposalDecision): string { return hash(normalizeDecision(decision)); }
 
-export function createApproval(input: Omit<Approval, "state" | "approver" | "decidedAt" | "decisionComment" | "invalidation">): Approval {
+export function createApproval(input: Omit<Approval, "state" | "approver" | "decidedBy" | "decidedAt" | "decisionComment" | "rejectionReason" | "invalidation">): Approval {
   if (input.scope.permits.length !== 1 || input.scope.permits[0] !== "prepare-only") throw new Error("MVP approvals permit prepare-only only");
-  return { ...input, state: "pending", approver: null, decidedAt: null, decisionComment: null, invalidation: null };
+  return { ...input, state: "pending", approver: null, decidedBy: null, decidedAt: null, decisionComment: null, rejectionReason: null, invalidation: null };
 }
 
 export function detectApprovalInvalidation(approval: Approval, snapshot: ApprovalSnapshot, changedBy: ActorRef, detectedAt: string): ApprovalInvalidation | null {
@@ -38,4 +40,21 @@ export function detectApprovalInvalidation(approval: Approval, snapshot: Approva
   }
   if (changed.length === 0) return null;
   return { detectedAt, changedFields: [...new Set(changed)], previousHash: approval.targetDecisionSnapshotHash, currentHash: current, changedBy };
+}
+
+/** ApprovalとWork Itemの判断結果を同時に確定する純粋なDomain API。保存は呼び出し側に委譲する。 */
+export function decideApproval(input: ApprovalDecisionInput): ApprovalDecisionResult {
+  const { workItem, approval, actor, decision, issuedAt, snapshot } = input;
+  if (approval.state !== "pending") return { ok: false, code: "invalid-state", message: "Only a pending approval can be decided." };
+  if (approval.workItemId !== workItem.id || workItem.currentApprovalId !== approval.id) return { ok: false, code: "approval-mismatch", message: "Approval does not match the current Work Item." };
+  if (actor.type !== "human" || workItem.assignedHumanId !== actor.id || (approval.approver !== null && approval.approver.id !== actor.id)) return { ok: false, code: "actor-not-authorized", message: "Actor is not authorized for this approval." };
+  if (workItem.currentDeliverableId !== approval.targetDeliverableId || snapshot.deliverable.id !== approval.targetDeliverableId || snapshot.deliverable.version !== approval.targetDeliverableVersion || snapshot.deliverable.hash !== approval.targetDeliverableHash || hashDecisionSnapshot(snapshot.decision) !== approval.targetDecisionSnapshotHash) return { ok: false, code: "binding-mismatch", message: "Approval binding does not match the current snapshot." };
+  if (approval.scope.permits.length !== 1 || approval.scope.permits[0] !== "prepare-only") return { ok: false, code: "binding-mismatch", message: "Approval scope is outside the MVP prepare-only boundary." };
+  if (decision === "reject" && !input.reason?.trim()) return { ok: false, code: "missing-reason", message: "Reject reason is required." };
+  const result = transition(workItem, decision === "approve"
+    ? { type: "human-approved", at: issuedAt, humanId: actor.id, approvalId: approval.id, approvalState: approval.state }
+    : { type: "human-rejected", at: issuedAt, humanId: actor.id, approvalId: approval.id, reason: input.reason });
+  if (!result.ok) return { ok: false, code: "domain-rejected", message: result.error.message };
+  const updatedApproval: Approval = { ...approval, state: decision === "approve" ? "approved" : "rejected", approver: actor, decidedBy: actor, decidedAt: issuedAt, decisionComment: decision === "reject" ? input.reason!.trim() : approval.decisionComment, rejectionReason: decision === "reject" ? input.reason!.trim() : null };
+  return { ok: true, workItem: result.item, approval: updatedApproval };
 }

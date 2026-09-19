@@ -32,11 +32,13 @@ export type Approval = {
   requestedBy: ActorRef;
   requestedAt: string;
   approver: ActorRef | null;
+  decidedBy: ActorRef | null;
   decidedAt: string | null;
   scope: ApprovalScope;
   expiresAt: string;
   state: ApprovalState;
   decisionComment: string | null;
+  rejectionReason: string | null;
   supersedesApprovalId: string | null;
   invalidation: ApprovalInvalidation | null;
 };
@@ -45,3 +47,17 @@ export type ApprovalSnapshot = {
   deliverable: { id: string; version: number; hash: string; body?: string; subject?: string; rate?: string | number | null; recipients?: string[]; attachments?: string[]; disclosedFields?: string[]; personIds?: string[] };
   decision: ProposalDecision;
 };
+
+export type ApprovalDecisionInput = {
+  workItem: WorkItem;
+  approval: Approval;
+  actor: ActorRef;
+  decision: "approve" | "reject";
+  issuedAt: string;
+  snapshot: ApprovalSnapshot;
+  reason?: string;
+};
+
+export type ApprovalDecisionResult =
+  | { ok: true; workItem: WorkItem; approval: Approval }
+  | { ok: false; code: "invalid-state" | "approval-mismatch" | "actor-not-authorized" | "binding-mismatch" | "missing-reason" | "domain-rejected"; message: string };
