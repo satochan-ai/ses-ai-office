@@ -5,6 +5,7 @@ import { CheckCircle2, Monitor, X } from "lucide-react";
 import type { V3AgentView } from "@/types/officeV3Claude";
 import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
+import type { Approval } from "@/types/approval";
 import s from "./OfficeV3.module.css";
 
 const FIELD_LABEL: Record<string, string> = { proposalRoute: "提案経路", personIntent: "本人意向", availabilityStart: "稼働開始日", duplicateProposal: "重複提案", disclosureScope: "情報開示範囲", informationFreshness: "情報の鮮度" };
@@ -17,8 +18,9 @@ const OPTIONS: Record<string, { label: string; status: string }[]> = {
 };
 
 type ResolveHandler = (workItemId: string, missingInfoId: string, value: MissingInfoResolutionValue) => Promise<{ ok: true } | { ok: false; message: string }>;
+type ApproveHandler = (workItemId: string, approvalId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-export default function AgentDetailPanel({ view, onClose, workload, onResolveMissingInfo }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload; onResolveMissingInfo?: ResolveHandler }) {
+export default function AgentDetailPanel({ view, onClose, workload, approvalStates, onResolveMissingInfo, onApproveWorkItem }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload; approvalStates?: Record<string, Approval>; onResolveMissingInfo?: ResolveHandler; onApproveWorkItem?: ApproveHandler }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [selectedMissing, setSelectedMissing] = useState<{ workItemId: string; id: string; field: string } | null>(null);
@@ -27,6 +29,7 @@ export default function AgentDetailPanel({ view, onClose, workload, onResolveMis
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [approving, setApproving] = useState<string | null>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -122,6 +125,11 @@ export default function AgentDetailPanel({ view, onClose, workload, onResolveMis
                       <ul>{item.missingInfo.filter(info => info.status === "open").map(info => (
                         <li key={info.id}><button type="button" onClick={() => { setSelectedMissing({ workItemId: item.id, id: info.id, field: info.field }); setChoice(""); setDate(""); setNote(""); setMessage(null); }}>{FIELD_LABEL[info.field] ?? info.field}</button></li>
                       ))}</ul>
+                    </div>
+                  ) : null}
+                  {approvalStates?.[item.id] ? (
+                    <div className={s.approvalSection}>
+                      {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : approvalStates[item.id].state === "pending" ? <><span>人間確認が必要です</span><button type="button" disabled={approving === item.id} onClick={async () => { setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : <span>承認待ちに戻る必要があります</span>}
                     </div>
                   ) : null}
                   {selectedMissing?.workItemId === item.id ? (

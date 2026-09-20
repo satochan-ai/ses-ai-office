@@ -16,6 +16,7 @@ import { projectAgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
 import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
 import { executeWorkItemCommandUseCase } from "@/lib/application/executeWorkItemCommand";
+import { prepareWorkItemApproval, approvalSnapshotForWorkItem } from "@/lib/application/prepareWorkItemApproval";
 import type { WorkItemCommand } from "@/types/workItemCommand";
 import type { WorkItem } from "@/types/workItem";
 import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
@@ -47,6 +48,7 @@ export default function ClaudeOfficeV3() {
   const [floorView, setFloorView] = useState<V3FloorView>("all");
   const [compact, setCompact] = useState(false);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const [approvalStates, setApprovalStates] = useState<Record<string, import("@/types/approval").Approval>>({});
   const repositoryRef = useRef<ReturnType<typeof createSessionStorageWorkItemRepository> | null>(null);
   const demo = useOfficeV3ClaudeDemo();
 
@@ -56,7 +58,13 @@ export default function ClaudeOfficeV3() {
     const now = new Date().toISOString();
     const repository = createSessionStorageWorkItemRepository(window.sessionStorage);
     repositoryRef.current = repository;
-    void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async () => setWorkItems(await repository.listWorkItems()));
+    void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async () => {
+      const current = await repository.listWorkItems();
+      for (const item of current) await prepareWorkItemApproval(item, repository, now);
+      const refreshed = await repository.listWorkItems();
+      const approvals = await Promise.all(refreshed.flatMap(item => item.currentApprovalId ? [repository.getApproval(item.currentApprovalId)] : []));
+      setWorkItems(refreshed); setApprovalStates(Object.fromEntries(approvals.filter((approval): approval is NonNullable<typeof approval> => approval !== null).map(approval => [approval.workItemId, approval])));
+    });
   }, []);
 
   const resolveMissingInfo = useCallback(async (workItemId: string, missingInfoId: string, value: import("@/types/workItemResolution").MissingInfoResolutionValue) => {
@@ -68,7 +76,25 @@ export default function ClaudeOfficeV3() {
       const messages: Record<string, string> = { "work-item-not-found": "Work Itemが見つかりません", "missing-info-not-found": "不足情報が見つかりません", "missing-info-already-resolved": "すでに確認済みです", "repository-error": "保存に失敗しました", "effect-application-failed": "関連状態の更新に失敗しました", "domain-rejected": "入力内容を確認してください" };
       return { ok: false as const, message: messages[result.code] ?? "保存に失敗しました" };
     }
-    setWorkItems(await repository.listWorkItems());
+    const refreshed = await repository.listWorkItems();
+    for (const item of refreshed) await prepareWorkItemApproval(item, repository, command.issuedAt);
+    const latest = await repository.listWorkItems();
+    setWorkItems(latest);
+    const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repository.getApproval(item.currentApprovalId)] : []));
+    setApprovalStates(Object.fromEntries(approvals.filter((approval): approval is NonNullable<typeof approval> => approval !== null).map(approval => [approval.workItemId, approval])));
+    return { ok: true as const };
+  }, []);
+
+  const approveWorkItem = useCallback(async (workItemId: string, approvalId: string) => {
+    const repository = repositoryRef.current;
+    if (!repository) return { ok: false as const, message: "保存先を準備できませんでした" };
+    const item = await repository.getWorkItem(workItemId); const approval = await repository.getApproval(approvalId);
+    if (!item || !approval) return { ok: false as const, message: "承認情報を取得できませんでした" };
+    const issuedAt = new Date().toISOString();
+    const command: WorkItemCommand = { type: "approve-work-item", commandId: `cmd-${Date.now()}-${approvalId}`, workItemId, approvalId, actorId: "demo-human", issuedAt };
+    const result = await executeWorkItemCommandUseCase({ command, repositories: repository, approvalSnapshots: { [approvalId]: approvalSnapshotForWorkItem(item) }, effectContext: { at: issuedAt, actor: { type: "human", id: "demo-human" } } });
+    if (!result.ok) return { ok: false as const, message: result.code === "approval-not-found" ? "承認情報を取得できませんでした" : "承認できませんでした" };
+    const refreshed = await repository.listWorkItems(); setWorkItems(refreshed); setApprovalStates(Object.fromEntries((await Promise.all(refreshed.flatMap(current => current.currentApprovalId ? [repository.getApproval(current.currentApprovalId)] : []))).filter((current): current is NonNullable<typeof current> => current !== null).map(current => [current.workItemId, current])));
     return { ok: true as const };
   }, []);
 
@@ -261,7 +287,7 @@ export default function ClaudeOfficeV3() {
             />
           </div>
           {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} onResolveMissingInfo={resolveMissingInfo} />
+            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} onResolveMissingInfo={resolveMissingInfo} onApproveWorkItem={approveWorkItem} />
           ) : isHumanSeatSelected ? (
             <HumanSeatPanel
               seat={v3HumanSeat}
