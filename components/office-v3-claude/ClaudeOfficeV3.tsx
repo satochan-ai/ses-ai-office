@@ -17,6 +17,7 @@ import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessi
 import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
 import { executeWorkItemCommandUseCase } from "@/lib/application/executeWorkItemCommand";
 import { prepareWorkItemApproval, approvalSnapshotForWorkItem } from "@/lib/application/prepareWorkItemApproval";
+import { isHumanLoopQaSeedEnabled, resetHumanLoopDemoSeed, seedHumanLoopDemoResult } from "@/lib/runtime/demoQaSeed";
 import type { WorkItemCommand } from "@/types/workItemCommand";
 import type { WorkItem } from "@/types/workItem";
 import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
@@ -50,9 +51,16 @@ export default function ClaudeOfficeV3() {
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [approvalStates, setApprovalStates] = useState<Record<string, import("@/types/approval").Approval>>({});
   const repositoryRef = useRef<ReturnType<typeof createSessionStorageWorkItemRepository> | null>(null);
+  const bootstrapStartedRef = useRef(false);
   const demo = useOfficeV3ClaudeDemo();
 
   useEffect(() => {
+    if (bootstrapStartedRef.current) return;
+    bootstrapStartedRef.current = true;
+    if (isHumanLoopQaSeedEnabled(window.location.search, process.env.NODE_ENV)) {
+      if (new URLSearchParams(window.location.search).get("qaReset") === "human-loop") resetHumanLoopDemoSeed(window.sessionStorage);
+      seedHumanLoopDemoResult();
+    }
     const store = readOfficeV3DemoResultStore();
     const results = store ? Object.values(store.results).filter((result): result is NonNullable<typeof result> => result !== undefined) : [];
     const now = new Date().toISOString();

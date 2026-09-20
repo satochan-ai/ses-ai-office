@@ -7,6 +7,7 @@ import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
 import type { Approval } from "@/types/approval";
 import { hasCommandReason } from "@/lib/workItem/projection/agentWorkItemActions";
+import { buildAvailabilityStartResolution } from "@/lib/workItem/ui/missingInfoInput";
 import s from "./OfficeV3.module.css";
 
 const FIELD_LABEL: Record<string, string> = { proposalRoute: "提案経路", personIntent: "本人意向", availabilityStart: "稼働開始日", duplicateProposal: "重複提案", disclosureScope: "情報開示範囲", informationFreshness: "情報の鮮度" };
@@ -66,7 +67,11 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
     const field = selectedMissing.field;
     let value: MissingInfoResolutionValue;
     if (field === "informationFreshness") value = { field, note: note || undefined };
-    else if (field === "availabilityStart") value = { field, status: choice as "matched" | "mismatched", date: date || undefined };
+    else if (field === "availabilityStart") {
+      const resolution = buildAvailabilityStartResolution(choice, date);
+      if (!resolution) { setMessage("稼働開始日を選択してください"); return; }
+      value = resolution;
+    }
     else value = { field, status: choice as never, note: note || undefined } as MissingInfoResolutionValue;
     setSaving(true); setMessage(null);
     const result = await onResolveMissingInfo(selectedMissing.workItemId, selectedMissing.id, value);
@@ -147,7 +152,7 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
                   {selectedMissing?.workItemId === item.id ? (
                     <div className={s.missingInfoEditor}>
                       <label>{FIELD_LABEL[selectedMissing.field] ?? selectedMissing.field}
-                        {selectedMissing.field === "informationFreshness" ? <textarea value={note} onChange={event => setNote(event.target.value)} placeholder="確認メモ（任意）" /> : selectedMissing.field === "availabilityStart" ? <><select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field].map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select><input type="date" value={date} onChange={event => setDate(event.target.value)} /></> : <select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field]?.map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select>}
+                        {selectedMissing.field === "informationFreshness" ? <textarea value={note} onChange={event => setNote(event.target.value)} placeholder="確認メモ（任意）" /> : selectedMissing.field === "availabilityStart" ? <><select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field].map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select><input type="date" aria-label="稼働開始日" value={date} onChange={event => setDate(event.target.value)} onInput={event => setDate(event.currentTarget.value)} /></> : <select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field]?.map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select>}
                       </label>
                       <div><button type="button" onClick={submit} disabled={saving || (selectedMissing.field !== "informationFreshness" && !choice)}>{saving ? "保存中…" : "確定"}</button><button type="button" onClick={() => setSelectedMissing(null)} disabled={saving}>キャンセル</button></div>
                     </div>
