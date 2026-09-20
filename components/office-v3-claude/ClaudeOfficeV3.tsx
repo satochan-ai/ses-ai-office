@@ -98,6 +98,19 @@ export default function ClaudeOfficeV3() {
     return { ok: true as const };
   }, []);
 
+  const rejectOrRework = useCallback(async (workItemId: string, mode: "reject" | "rework", reason: string) => {
+    const repository = repositoryRef.current; if (!repository) return { ok: false as const, message: "保存先を準備できませんでした" };
+    const item = await repository.getWorkItem(workItemId); const approval = item?.currentApprovalId ? await repository.getApproval(item.currentApprovalId) : null;
+    const issuedAt = new Date().toISOString();
+    const command: WorkItemCommand = mode === "reject"
+      ? { type: "reject-work-item", commandId: `cmd-${Date.now()}-${workItemId}`, workItemId, approvalId: approval?.id ?? "", actorId: "demo-human", issuedAt, reason }
+      : { type: "return-for-rework", commandId: `cmd-${Date.now()}-${workItemId}`, workItemId, actorId: "demo-human", issuedAt, reason };
+    const result = await executeWorkItemCommandUseCase({ command, repositories: repository, approvalSnapshots: approval ? { [approval.id]: approvalSnapshotForWorkItem(item!) } : {}, effectContext: { at: issuedAt, actor: { type: "human", id: "demo-human" } } });
+    if (!result.ok) return { ok: false as const, message: result.code === "approval-not-found" ? "承認情報を取得できませんでした" : "操作できませんでした" };
+    const latest = await repository.listWorkItems(); setWorkItems(latest); setApprovalStates(Object.fromEntries((await Promise.all(latest.flatMap(current => current.currentApprovalId ? [repository.getApproval(current.currentApprovalId)] : []))).filter((current): current is NonNullable<typeof current> => current !== null).map(current => [current.workItemId, current])));
+    return { ok: true as const };
+  }, []);
+
   // ビューポートが正方形寄り（モバイル）かどうかだけを見る。リスナーは1つ。
   useEffect(() => {
     const query = window.matchMedia("(max-width: 900px)");
@@ -287,7 +300,7 @@ export default function ClaudeOfficeV3() {
             />
           </div>
           {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} onResolveMissingInfo={resolveMissingInfo} onApproveWorkItem={approveWorkItem} />
+            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} onResolveMissingInfo={resolveMissingInfo} onApproveWorkItem={approveWorkItem} onRejectOrRework={rejectOrRework} />
           ) : isHumanSeatSelected ? (
             <HumanSeatPanel
               seat={v3HumanSeat}

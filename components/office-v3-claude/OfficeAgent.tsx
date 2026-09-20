@@ -909,6 +909,7 @@ export default function OfficeAgent({ view, selected, dimmed, onSelect, isDemoAc
           <text x={8} y={4} className={s.workloadBadgeText}>対応中 {workload.total}</text>
           {workload.needsHumanDecision > 0 ? <text x={boxW + 7} y={4} className={s.workloadBadgeAttention}>判断待ち {workload.needsHumanDecision}</text> : null}
           {workload.missingInfo > 0 ? <text x={boxW + (workload.needsHumanDecision > 0 ? 78 : 7)} y={4} className={s.workloadBadgeWarning}>情報不足 {workload.missingInfo}</text> : null}
+          {workload.rework > 0 ? <text x={boxW + (workload.needsHumanDecision > 0 ? 156 : workload.missingInfo > 0 ? 78 : 7)} y={4} className={s.workloadBadgeAttention}>再作業 {workload.rework}</text> : null}
         </g>
       ) : null}
     </g>
