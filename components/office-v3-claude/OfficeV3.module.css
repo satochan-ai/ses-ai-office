@@ -1407,6 +1407,32 @@
   font-size: 10px;
 }
 
+.missingInfoForm {
+  margin-top: 6px;
+  border-top: 1px solid var(--v3-line);
+  padding-top: 5px;
+}
+
+.missingInfoForm strong { color: #f0c782; font-size: 10px; }
+.missingInfoForm ul { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 0; padding: 0; list-style: none; }
+.missingInfoForm button,
+.missingInfoEditor button,
+.missingInfoEditor select,
+.missingInfoEditor input,
+.missingInfoEditor textarea { font: inherit; }
+.missingInfoForm button { border: 1px solid rgba(240, 199, 130, 0.45); border-radius: 5px; padding: 3px 6px; background: rgba(240, 199, 130, 0.08); color: #f0c782; cursor: pointer; font-size: 10px; }
+.missingInfoEditor { margin-top: 6px; display: grid; gap: 5px; }
+.missingInfoEditor label { display: grid; gap: 4px; color: var(--v3-muted); font-size: 10px; }
+.missingInfoEditor select,
+.missingInfoEditor input,
+.missingInfoEditor textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--v3-line); border-radius: 5px; padding: 4px 5px; background: rgba(0, 0, 0, 0.16); color: var(--v3-ink); }
+.missingInfoEditor textarea { min-height: 42px; resize: vertical; }
+.missingInfoEditor > div { display: flex; gap: 5px; }
+.missingInfoEditor > div button { border: 1px solid var(--v3-line); border-radius: 5px; padding: 4px 7px; background: rgba(255, 255, 255, 0.06); color: var(--v3-ink); cursor: pointer; font-size: 10px; }
+.missingInfoEditor > div button:first-child { border-color: rgba(143, 191, 156, 0.55); color: #b9e2c0; }
+.missingInfoEditor button:disabled { opacity: 0.45; cursor: not-allowed; }
+.workloadMessage { margin: 6px 0 0; color: #b9e2c0; font-size: 10px; }
+
 .workloadItem p {
   margin: 4px 0 0;
   color: var(--v3-muted);

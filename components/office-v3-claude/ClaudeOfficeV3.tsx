@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Building2, LayoutDashboard, MousePointerClick, Sparkles } from "lucide-react";
 import { officeAgents } from "@/data/office";
@@ -12,8 +12,11 @@ import { v3Layout3f } from "@/data/officeV3ClaudeLayout.3f";
 import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
 import { readOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
-import { demoResultsToWorkItems } from "@/lib/runtime/demoAdapter";
 import { projectAgentWorkload } from "@/lib/workItem/projection/agentWorkload";
+import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
+import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
+import { executeWorkItemCommandUseCase } from "@/lib/application/executeWorkItemCommand";
+import type { WorkItemCommand } from "@/types/workItemCommand";
 import type { WorkItem } from "@/types/workItem";
 import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
@@ -44,13 +47,29 @@ export default function ClaudeOfficeV3() {
   const [floorView, setFloorView] = useState<V3FloorView>("all");
   const [compact, setCompact] = useState(false);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const repositoryRef = useRef<ReturnType<typeof createSessionStorageWorkItemRepository> | null>(null);
   const demo = useOfficeV3ClaudeDemo();
 
   useEffect(() => {
     const store = readOfficeV3DemoResultStore();
     const results = store ? Object.values(store.results).filter((result): result is NonNullable<typeof result> => result !== undefined) : [];
     const now = new Date().toISOString();
-    setWorkItems(demoResultsToWorkItems(results, { now, createWorkItemId: result => `wi-demo-${result.scenarioId}` }));
+    const repository = createSessionStorageWorkItemRepository(window.sessionStorage);
+    repositoryRef.current = repository;
+    void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async () => setWorkItems(await repository.listWorkItems()));
+  }, []);
+
+  const resolveMissingInfo = useCallback(async (workItemId: string, missingInfoId: string, value: import("@/types/workItemResolution").MissingInfoResolutionValue) => {
+    const repository = repositoryRef.current;
+    if (!repository) return { ok: false as const, message: "保存先を準備できませんでした" };
+    const command: WorkItemCommand = { type: "provide-missing-info", commandId: `cmd-${Date.now()}-${missingInfoId}`, workItemId, actorId: "demo-human", issuedAt: new Date().toISOString(), missingInfoId, value };
+    const result = await executeWorkItemCommandUseCase({ command, repositories: repository, effectContext: { at: command.issuedAt, actor: { type: "human", id: command.actorId } } });
+    if (!result.ok) {
+      const messages: Record<string, string> = { "work-item-not-found": "Work Itemが見つかりません", "missing-info-not-found": "不足情報が見つかりません", "missing-info-already-resolved": "すでに確認済みです", "repository-error": "保存に失敗しました", "effect-application-failed": "関連状態の更新に失敗しました", "domain-rejected": "入力内容を確認してください" };
+      return { ok: false as const, message: messages[result.code] ?? "保存に失敗しました" };
+    }
+    setWorkItems(await repository.listWorkItems());
+    return { ok: true as const };
   }, []);
 
   // ビューポートが正方形寄り（モバイル）かどうかだけを見る。リスナーは1つ。
@@ -242,7 +261,7 @@ export default function ClaudeOfficeV3() {
             />
           </div>
           {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} />
+            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} onResolveMissingInfo={resolveMissingInfo} />
           ) : isHumanSeatSelected ? (
             <HumanSeatPanel
               seat={v3HumanSeat}

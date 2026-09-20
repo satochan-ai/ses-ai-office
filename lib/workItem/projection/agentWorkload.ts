@@ -12,6 +12,7 @@ export type AgentWorkItemCard = {
   needsHumanDecision: boolean;
   nextAction: string;
   isDemo: boolean;
+  missingInfo: WorkItem["missingInfo"];
 };
 
 export type AgentWorkload = {
@@ -62,6 +63,7 @@ export function projectAgentWorkload(items: WorkItem[], agentId: string, now: st
       needsHumanDecision: decisionCard?.nextAction?.ownerType === "human" || item.nextAction?.ownerType === "human",
       nextAction: item.nextAction?.label ?? "次の対応を確認する",
       isDemo: item.mode === "demo",
+      missingInfo: item.missingInfo,
     } satisfies AgentWorkItemCard;
   });
   return {

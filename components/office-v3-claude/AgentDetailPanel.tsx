@@ -1,14 +1,32 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Monitor, X } from "lucide-react";
 import type { V3AgentView } from "@/types/officeV3Claude";
 import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
+import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
 import s from "./OfficeV3.module.css";
 
-export default function AgentDetailPanel({ view, onClose, workload }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload }) {
+const FIELD_LABEL: Record<string, string> = { proposalRoute: "提案経路", personIntent: "本人意向", availabilityStart: "稼働開始日", duplicateProposal: "重複提案", disclosureScope: "情報開示範囲", informationFreshness: "情報の鮮度" };
+const OPTIONS: Record<string, { label: string; status: string }[]> = {
+  proposalRoute: [{ label: "確認済み", status: "clear" }, { label: "矛盾あり", status: "conflict" }],
+  personIntent: [{ label: "提案可", status: "confirmed" }, { label: "辞退", status: "declined" }],
+  availabilityStart: [{ label: "開始日一致", status: "matched" }, { label: "開始日不一致", status: "mismatched" }],
+  duplicateProposal: [{ label: "重複なし", status: "none" }, { label: "重複の可能性", status: "possible" }, { label: "重複確認", status: "confirmed" }],
+  disclosureScope: [{ label: "開示可能", status: "defined" }, { label: "開示制限", status: "restricted" }],
+};
+
+type ResolveHandler = (workItemId: string, missingInfoId: string, value: MissingInfoResolutionValue) => Promise<{ ok: true } | { ok: false; message: string }>;
+
+export default function AgentDetailPanel({ view, onClose, workload, onResolveMissingInfo }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload; onResolveMissingInfo?: ResolveHandler }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [selectedMissing, setSelectedMissing] = useState<{ workItemId: string; id: string; field: string } | null>(null);
+  const [choice, setChoice] = useState("");
+  const [date, setDate] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
     closeRef.current?.focus();
@@ -35,6 +53,19 @@ export default function AgentDetailPanel({ view, onClose, workload }: { view: V3
   }, [onClose]);
 
   const { placement } = view;
+  const submit = async () => {
+    if (!selectedMissing || !onResolveMissingInfo || (selectedMissing.field !== "informationFreshness" && !choice)) return;
+    const field = selectedMissing.field;
+    let value: MissingInfoResolutionValue;
+    if (field === "informationFreshness") value = { field, note: note || undefined };
+    else if (field === "availabilityStart") value = { field, status: choice as "matched" | "mismatched", date: date || undefined };
+    else value = { field, status: choice as never, note: note || undefined } as MissingInfoResolutionValue;
+    setSaving(true); setMessage(null);
+    const result = await onResolveMissingInfo(selectedMissing.workItemId, selectedMissing.id, value);
+    setSaving(false);
+    if (result.ok) { setMessage("確認内容を保存しました"); setSelectedMissing(null); setChoice(""); setDate(""); setNote(""); }
+    else setMessage(result.message);
+  };
 
   return (
     <div
@@ -85,11 +116,28 @@ export default function AgentDetailPanel({ view, onClose, workload }: { view: V3
                   <p>{item.nextAction}</p>
                   {item.needsHumanDecision ? <small>人間判断待ち</small> : null}
                   {item.isDemo ? <em className={s.workloadDemo}>Demo</em> : null}
+                  {item.missingInfo.filter(info => info.status === "open").length > 0 && onResolveMissingInfo ? (
+                    <div className={s.missingInfoForm}>
+                      <strong>不足情報 {item.missingInfo.filter(info => info.status === "open").length}件</strong>
+                      <ul>{item.missingInfo.filter(info => info.status === "open").map(info => (
+                        <li key={info.id}><button type="button" onClick={() => { setSelectedMissing({ workItemId: item.id, id: info.id, field: info.field }); setChoice(""); setDate(""); setNote(""); setMessage(null); }}>{FIELD_LABEL[info.field] ?? info.field}</button></li>
+                      ))}</ul>
+                    </div>
+                  ) : null}
+                  {selectedMissing?.workItemId === item.id ? (
+                    <div className={s.missingInfoEditor}>
+                      <label>{FIELD_LABEL[selectedMissing.field] ?? selectedMissing.field}
+                        {selectedMissing.field === "informationFreshness" ? <textarea value={note} onChange={event => setNote(event.target.value)} placeholder="確認メモ（任意）" /> : selectedMissing.field === "availabilityStart" ? <><select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field].map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select><input type="date" value={date} onChange={event => setDate(event.target.value)} /></> : <select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field]?.map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select>}
+                      </label>
+                      <div><button type="button" onClick={submit} disabled={saving || (selectedMissing.field !== "informationFreshness" && !choice)}>{saving ? "保存中…" : "確定"}</button><button type="button" onClick={() => setSelectedMissing(null)} disabled={saving}>キャンセル</button></div>
+                    </div>
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
           {workload.total > workload.items.length ? <p className={s.workloadMore}>ほか{workload.total - workload.items.length}件</p> : null}
+          {message ? <p className={s.workloadMessage} role="status">{message}</p> : null}
         </section>
       ) : null}
 
