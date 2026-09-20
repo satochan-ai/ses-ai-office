@@ -19,6 +19,7 @@ import {
 } from "@/data/officeV3ClaudeLayout";
 import type { V3AgentView, V3Area, V3AreaId, V3HumanSeat } from "@/types/officeV3Claude";
 import type { OfficeV3DemoStatus } from "@/types/officeV3ClaudeDemo";
+import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import HumanSeat from "./HumanSeat";
 import OfficeAgent from "./OfficeAgent";
 import OfficeFurniture from "./OfficeFurniture";
@@ -158,6 +159,7 @@ type Props = {
   areas?: readonly V3Area[];
   /** Step6: 床全面へ重ねる濃色ティント（3F のダーク化。未指定なら重ねない）。 */
   floorTint?: string;
+  workloads?: Record<string, AgentWorkload>;
 };
 
 type ActorPoint = {
@@ -209,7 +211,7 @@ export default function OfficeScene({
   views, selectedId, area, compact, onSelect, activeAgentId = null, activeStatusText, previousAgentId = null,
   handoffStepId, demoStatus = "idle", showHumanSeat = true,
   zones = v3Zones, corridors = v3Corridors, furniture = v3Furniture, viewBox = VIEWBOX,
-  humanSeat = v3HumanSeat, humanSeatVariant = "default", areas, floorTint,
+  humanSeat = v3HumanSeat, humanSeatVariant = "default", areas, floorTint, workloads,
 }: Props) {
   const focus = (areas ?? v3Areas).find(a => a.id === area) ?? (areas ?? v3Areas)[0];
   const scale = compact && area === "all" ? focus.scale * 0.72 : focus.scale;
@@ -232,6 +234,7 @@ export default function OfficeScene({
             onSelect={onSelect}
             isDemoActive={activeAgentId === view.placement.agentId}
             demoStatusText={activeAgentId === view.placement.agentId ? activeStatusText : undefined}
+            workload={workloads?.[view.placement.agentId]}
           />
         ),
       })),
@@ -254,7 +257,7 @@ export default function OfficeScene({
         : []),
     ];
     return items.sort((a, b) => a.depth - b.depth || a.z - b.z);
-  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture, humanSeat, humanSeatVariant]);
+  }, [onSelect, selectedId, views, activeAgentId, activeStatusText, showHumanSeat, furniture, humanSeat, humanSeatVariant, workloads]);
 
   const activeZones = new Set(zones.filter(zone => area === "all" || zone.area === area).map(zone => zone.id));
 

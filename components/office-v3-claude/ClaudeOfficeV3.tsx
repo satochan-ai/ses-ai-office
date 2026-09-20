@@ -110,8 +110,13 @@ export default function ClaudeOfficeV3() {
     return map;
   }, [views]);
 
+  const workloadNow = workItems.length > 0 ? workItems[0].updatedAt : new Date().toISOString();
+  const workloads = useMemo(() => Object.fromEntries(views.map(view => [
+    view.placement.agentId,
+    projectAgentWorkload(workItems, view.placement.agentId, workloadNow),
+  ])), [views, workItems, workloadNow]);
   const selected = views.find(view => view.placement.agentId === selectedId) ?? null;
-  const selectedWorkload = selected ? projectAgentWorkload(workItems, selected.placement.agentId, new Date().toISOString()) : undefined;
+  const selectedWorkload = selected ? workloads[selected.placement.agentId] : undefined;
   const isHumanSeatSelected = selectedId === HUMAN_SEAT_ID;
   const close = useCallback(() => setSelectedId(null), []);
   const select = useCallback((agentId: string) => setSelectedId(current => (current === agentId ? null : agentId)), []);
@@ -233,6 +238,7 @@ export default function ClaudeOfficeV3() {
               humanSeat={floorLayout?.humanSeat}
               areas={floorLayout?.areas}
               floorTint={floorLayout?.floorTint}
+              workloads={workloads}
             />
           </div>
           {selected ? (

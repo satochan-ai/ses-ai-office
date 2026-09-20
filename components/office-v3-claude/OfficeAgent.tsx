@@ -2,6 +2,7 @@
 
 import { isoX, isoY, v3StatusTone } from "@/data/officeV3ClaudeLayout";
 import type { V3AgentView, V3Appearance, V3ClothingType, V3DeskItem, V3HairStyle, V3Pose, V3Prop, V3WorkerPose } from "@/types/officeV3Claude";
+import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import s from "./OfficeV3.module.css";
 import { ContactShadow } from "./OfficeFurniture";
 
@@ -773,9 +774,10 @@ type Props = {
    */
   isDemoActive?: boolean;
   demoStatusText?: string;
+  workload?: AgentWorkload;
 };
 
-export default function OfficeAgent({ view, selected, dimmed, onSelect, isDemoActive = false, demoStatusText }: Props) {
+export default function OfficeAgent({ view, selected, dimmed, onSelect, isDemoActive = false, demoStatusText, workload }: Props) {
   const { placement, name, role } = view;
   const a = placement.appearance;
   const x = isoX(placement.gx, placement.gy);
@@ -899,6 +901,14 @@ export default function OfficeAgent({ view, selected, dimmed, onSelect, isDemoAc
           <text x={9} y={4} textAnchor="start" className={s.demoActiveText}>
             {demoStatusText}
           </text>
+        </g>
+      ) : null}
+      {workload && workload.total > 0 ? (
+        <g className={s.workloadBadges} transform={`translate(${labelPos.lx}, ${labelPos.ly + (isDemoActive && demoStatusText ? 50 : 27)})`} aria-label={`対応中 ${workload.total}件、判断待ち ${workload.needsHumanDecision}件、情報不足 ${workload.missingInfo}件`}>
+          <rect x={0} y={-9} width={Math.max(boxW, 78)} height={18} rx={7} />
+          <text x={8} y={4} className={s.workloadBadgeText}>対応中 {workload.total}</text>
+          {workload.needsHumanDecision > 0 ? <text x={boxW + 7} y={4} className={s.workloadBadgeAttention}>判断待ち {workload.needsHumanDecision}</text> : null}
+          {workload.missingInfo > 0 ? <text x={boxW + (workload.needsHumanDecision > 0 ? 78 : 7)} y={4} className={s.workloadBadgeWarning}>情報不足 {workload.missingInfo}</text> : null}
         </g>
       ) : null}
     </g>

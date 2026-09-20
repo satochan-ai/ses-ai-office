@@ -517,6 +517,22 @@
   animation: v3-connector 2.4s linear infinite;
 }
 
+.workloadBadges rect {
+  fill: rgba(35, 43, 60, 0.92);
+  stroke: rgba(238, 226, 206, 0.24);
+  stroke-width: 1;
+}
+
+.workloadBadges text {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1px;
+}
+
+.workloadBadgeText { fill: var(--v3-ink); }
+.workloadBadgeAttention { fill: #f0c782; }
+.workloadBadgeWarning { fill: #f0a991; }
+
 /* Demoの実行経路だけを一度だけ示す矢印。選択時の報告関係(.connectorLine)とは別の意味を持つ。 */
 .demoHandoffArrow {
   stroke: rgba(208, 161, 74, 0.78);

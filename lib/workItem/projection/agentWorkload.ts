@@ -18,6 +18,8 @@ export type AgentWorkload = {
   agentId: string;
   total: number;
   needsHumanDecision: number;
+  missingInfo: number;
+  rework: number;
   items: AgentWorkItemCard[];
 };
 
@@ -66,6 +68,11 @@ export function projectAgentWorkload(items: WorkItem[], agentId: string, now: st
     agentId,
     total: cards.length,
     needsHumanDecision: cards.filter(card => card.needsHumanDecision).length,
+    missingInfo: assigned.filter(item => {
+      const card = projectWorkItemToDecisionCard(item, now);
+      return (card?.blockerMissingInfoCount ?? 0) > 0 || item.status === "blocked_missing_info";
+    }).length,
+    rework: assigned.filter(item => item.status === "returned_for_rework").length,
     items: cards.slice(0, 3),
   };
 }

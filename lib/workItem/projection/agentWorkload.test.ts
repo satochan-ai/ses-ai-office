@@ -23,7 +23,7 @@ describe("projectAgentWorkload", () => {
   });
 
   it("returns an empty workload for an agent with no assigned items", () => {
-    expect(projectAgentWorkload([], "sales", "2026-09-20T00:00:00.000Z")).toMatchObject({ agentId: "sales", total: 0, needsHumanDecision: 0, items: [] });
+    expect(projectAgentWorkload([], "sales", "2026-09-20T00:00:00.000Z")).toMatchObject({ agentId: "sales", total: 0, needsHumanDecision: 0, missingInfo: 0, rework: 0, items: [] });
   });
 
   it("preserves the total while displaying at most three items", () => {
@@ -31,5 +31,12 @@ describe("projectAgentWorkload", () => {
     const workload = projectAgentWorkload(items, "sales", "2026-09-20T00:00:00.000Z");
     expect(workload.total).toBe(4);
     expect(workload.items).toHaveLength(3);
+  });
+
+  it("counts unresolved blocker information and excludes other agents", () => {
+    const blocked = item("blocked", "sales");
+    blocked.proposalDecisions[0].blockerMissingInfoIds = [blocked.missingInfo[0].id];
+    const workload = projectAgentWorkload([blocked, item("other", "other")], "sales", "2026-09-20T00:00:00.000Z");
+    expect(workload).toMatchObject({ total: 1, missingInfo: 1, rework: 0 });
   });
 });
