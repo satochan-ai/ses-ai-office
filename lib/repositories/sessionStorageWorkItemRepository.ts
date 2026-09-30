@@ -1,3 +1,5 @@
+import { registerWorkItemUnitOfWork } from "./workItemUnitOfWork";
+import { createSessionStorageWorkItemUnitOfWork } from "./sessionStorageWorkItemUnitOfWork";
 import type { Approval } from "@/types/approval";
 import type { Evidence, WorkItem } from "@/types/workItem";
 import type { WorkItemRepository } from "@/types/workItemRepository";
@@ -15,7 +17,7 @@ function read(storage: StorageLike): Snapshot {
 function write(storage: StorageLike, snapshot: Snapshot): void { storage.setItem(SESSION_WORK_ITEM_REPOSITORY_KEY, JSON.stringify(snapshot)); }
 
 export function createSessionStorageWorkItemRepository(storage: StorageLike): WorkItemRepository {
-  return {
+  const repository: WorkItemRepository = {
     async getWorkItem(id) { return clone(read(storage).workItems.find(item => item.id === id) ?? null); },
     async saveWorkItem(item) { const snapshot = read(storage); const index = snapshot.workItems.findIndex(current => current.id === item.id); if (index < 0) snapshot.workItems.push(clone(item)); else snapshot.workItems[index] = clone(item); write(storage, snapshot); },
     async listWorkItems() { return read(storage).workItems.slice().sort((a, b) => a.id.localeCompare(b.id)).map(clone); },
@@ -26,4 +28,6 @@ export function createSessionStorageWorkItemRepository(storage: StorageLike): Wo
     async saveEvidence(item) { const snapshot = read(storage); const index = snapshot.evidence.findIndex(current => current.id === item.id); if (index < 0) snapshot.evidence.push(clone(item)); else snapshot.evidence[index] = clone(item); write(storage, snapshot); },
     async listEvidenceByWorkItem(workItemId) { return read(storage).evidence.filter(item => item.workItemId === workItemId).sort((a, b) => a.id.localeCompare(b.id)).map(clone); },
   };
+  registerWorkItemUnitOfWork(repository, createSessionStorageWorkItemUnitOfWork(storage));
+  return repository;
 }
