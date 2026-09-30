@@ -23,7 +23,7 @@ type ResolveHandler = (workItemId: string, missingInfoId: string, value: Missing
 type ApproveHandler = (workItemId: string, approvalId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 type RejectReworkHandler = (workItemId: string, mode: "reject" | "rework", reason: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-export default function AgentDetailPanel({ view, onClose, workload, approvalStates, onResolveMissingInfo, onApproveWorkItem, onRejectOrRework }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload; approvalStates?: Record<string, Approval>; onResolveMissingInfo?: ResolveHandler; onApproveWorkItem?: ApproveHandler; onRejectOrRework?: RejectReworkHandler }) {
+export default function AgentDetailPanel({ view, onClose, workload, approvalStates, commandBusy = false, onResolveMissingInfo, onApproveWorkItem, onRejectOrRework }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload; approvalStates?: Record<string, Approval>; commandBusy?: boolean; onResolveMissingInfo?: ResolveHandler; onApproveWorkItem?: ApproveHandler; onRejectOrRework?: RejectReworkHandler }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [selectedMissing, setSelectedMissing] = useState<{ workItemId: string; id: string; field: string } | null>(null);
@@ -39,13 +39,17 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
 
   useEffect(() => {
     closeRef.current?.focus();
+    setSelectedMissing(null);
+    setDecision(null);
+    setDecisionReason("");
+    setMessage(null);
   }, [view.placement.id]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
       if (event.key !== "Tab" || !panelRef.current) return;
-      const focusable = panelRef.current.querySelectorAll<HTMLElement>("button, [href], [tabindex]:not([tabindex='-1'])");
+      const focusable = panelRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex='-1'])");
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -62,8 +66,9 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
   }, [onClose]);
 
   const { placement } = view;
+  const busy = commandBusy || saving || deciding || approving !== null;
   const submit = async () => {
-    if (!selectedMissing || !onResolveMissingInfo || (selectedMissing.field !== "informationFreshness" && !choice)) return;
+    if (busy || !selectedMissing || !onResolveMissingInfo || (selectedMissing.field !== "informationFreshness" && !choice)) return;
     const field = selectedMissing.field;
     let value: MissingInfoResolutionValue;
     if (field === "informationFreshness") value = { field, note: note || undefined };
@@ -93,7 +98,7 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
           <span className={s.detailZone}>{view.zoneName}</span>
           <strong>{view.name}</strong>
         </div>
-        <button ref={closeRef} type="button" onClick={onClose} aria-label="詳細を閉じる（Escキーでも閉じます）">
+        <button ref={closeRef} disabled={busy} type="button" onClick={onClose} aria-label="詳細を閉じる（Escキーでも閉じます）">
           <X size={16} />
         </button>
       </header>
@@ -133,19 +138,19 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
                     <div className={s.missingInfoForm}>
                       <strong>不足情報 {item.missingInfo.filter(info => info.status === "open").length}件</strong>
                       <ul>{item.missingInfo.filter(info => info.status === "open").map(info => (
-                        <li key={info.id}><button type="button" onClick={() => { setSelectedMissing({ workItemId: item.id, id: info.id, field: info.field }); setChoice(""); setDate(""); setNote(""); setMessage(null); }}>{FIELD_LABEL[info.field] ?? info.field}</button></li>
+                        <li key={info.id}><button type="button" disabled={busy} onClick={() => { setSelectedMissing({ workItemId: item.id, id: info.id, field: info.field }); setChoice(""); setDate(""); setNote(""); setMessage(null); }}>{FIELD_LABEL[info.field] ?? info.field}</button></li>
                       ))}</ul>
                     </div>
                   ) : null}
                   {approvalStates?.[item.id] ? (
                     <div className={s.approvalSection}>
-                      {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : approvalStates[item.id].state === "pending" ? <><span>人間確認が必要です</span><button type="button" disabled={approving === item.id} onClick={async () => { setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : <span>承認待ちに戻る必要があります</span>}
+                      {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : approvalStates[item.id].state === "pending" ? <><span>人間確認が必要です</span><button type="button" disabled={busy} onClick={async () => { if (busy) return; setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : <span>承認待ちに戻る必要があります</span>}
                     </div>
                   ) : null}
                   {onRejectOrRework && (approvalStates?.[item.id]?.state === "pending" || ["quality_check", "awaiting_approval", "preparation_recorded"].includes(item.status)) ? (
                     <div className={s.decisionActions}>
                       <p>承認しない場合は理由を入力してください。</p>
-                      {decision?.itemId === item.id ? <><textarea aria-label="却下・修正理由" value={decisionReason} onChange={event => setDecisionReason(event.target.value)} placeholder="理由（必須）" /><div><button type="button" disabled={deciding || !hasCommandReason(decisionReason)} onClick={async () => { setDeciding(true); const result = await onRejectOrRework(item.id, decision.mode, decisionReason); setDeciding(false); setMessage(result.ok ? (decision.mode === "reject" ? "却下しました" : "修正を依頼しました") : result.message); if (result.ok) { setDecision(null); setDecisionReason(""); } }}>{deciding ? "保存中…" : "確定"}</button><button type="button" disabled={deciding} onClick={() => setDecision(null)}>キャンセル</button></div></> : <div><button type="button" onClick={() => { setDecision({ itemId: item.id, mode: "reject" }); setDecisionReason(""); }}>承認しない</button><button type="button" onClick={() => { setDecision({ itemId: item.id, mode: "rework" }); setDecisionReason(""); }}>修正を依頼</button></div>}
+                      {decision?.itemId === item.id ? <><textarea disabled={busy} aria-label="却下・修正理由" value={decisionReason} onChange={event => setDecisionReason(event.target.value)} placeholder="理由（必須）" /><div><button type="button" disabled={busy || !hasCommandReason(decisionReason)} onClick={async () => { if (busy) return; setDeciding(true); const result = await onRejectOrRework(item.id, decision.mode, decisionReason); setDeciding(false); setMessage(result.ok ? (decision.mode === "reject" ? "却下しました" : "修正を依頼しました") : result.message); if (result.ok) { setDecision(null); setDecisionReason(""); } }}>{deciding ? "保存中…" : "確定"}</button><button type="button" disabled={busy} onClick={() => setDecision(null)}>キャンセル</button></div></> : <div>{approvalStates?.[item.id]?.state === "pending" ? <button type="button" disabled={busy} onClick={() => { setDecision({ itemId: item.id, mode: "reject" }); setDecisionReason(""); }}>承認しない</button> : null}<button type="button" disabled={busy} onClick={() => { setDecision({ itemId: item.id, mode: "rework" }); setDecisionReason(""); }}>修正を依頼</button></div>}
                     </div>
                   ) : null}
                   {item.status === "returned_for_rework" ? <p className={s.reworkNotice}>再作業中</p> : null}
@@ -154,7 +159,7 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
                       <label>{FIELD_LABEL[selectedMissing.field] ?? selectedMissing.field}
                         {selectedMissing.field === "informationFreshness" ? <textarea value={note} onChange={event => setNote(event.target.value)} placeholder="確認メモ（任意）" /> : selectedMissing.field === "availabilityStart" ? <><select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field].map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select><input type="date" aria-label="稼働開始日" value={date} onChange={event => setDate(event.target.value)} onInput={event => setDate(event.currentTarget.value)} /></> : <select value={choice} onChange={event => setChoice(event.target.value)}><option value="">選択してください</option>{OPTIONS[selectedMissing.field]?.map(option => <option key={option.status} value={option.status}>{option.label}</option>)}</select>}
                       </label>
-                      <div><button type="button" onClick={submit} disabled={saving || (selectedMissing.field !== "informationFreshness" && !choice)}>{saving ? "保存中…" : "確定"}</button><button type="button" onClick={() => setSelectedMissing(null)} disabled={saving}>キャンセル</button></div>
+                      <div><button type="button" onClick={submit} disabled={busy || (selectedMissing.field !== "informationFreshness" && !choice)}>{saving ? "保存中…" : "確定"}</button><button type="button" onClick={() => setSelectedMissing(null)} disabled={busy}>キャンセル</button></div>
                     </div>
                   ) : null}
                 </li>

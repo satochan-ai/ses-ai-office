@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRejectWorkItem, canReturnForRework, hasCommandReason, nextActionState } from "./agentWorkItemActions";
+import { canRejectWorkItem, canReturnForRework, createHumanCommandGuard, hasCommandReason, nextActionState } from "./agentWorkItemActions";
 import type { Approval } from "@/types/approval";
 import type { WorkItem } from "@/types/workItem";
 
@@ -7,6 +7,27 @@ const item = (status: WorkItem["status"] = "awaiting_approval", id = "wi-1"): Wo
 const approval = (state: Approval["state"] = "pending", workItemId = "wi-1"): Approval => ({ id: "approval:wi-1", workItemId, targetDeliverableId: "d", targetDeliverableVersion: 1, targetDeliverableHash: "h", targetDecisionSnapshotHash: "s", requestedBy: { type: "agent", id: "agent" }, requestedAt: "2026-09-20", approver: null, decidedBy: null, decidedAt: null, scope: { fields: [], permits: ["prepare-only"], conditions: [] }, expiresAt: "2099-01-01", state, decisionComment: null, rejectionReason: null, supersedesApprovalId: null, invalidation: null });
 
 describe("Visual Office WorkItem action boundaries", () => {
+  it("does not invoke a second command while the first is unresolved", async () => {
+    const guard = createHumanCommandGuard();
+    let release!: () => void;
+    let calls = 0;
+    const waiting = new Promise<void>(resolve => { release = resolve; });
+    const first = guard.run(async () => { calls += 1; await waiting; return { ok: true }; });
+    expect(guard.isBusy()).toBe(true);
+    expect(await guard.run(async () => { calls += 1; return { ok: true }; })).toMatchObject({ ok: false });
+    expect(calls).toBe(1);
+    release(); await first;
+    expect(guard.isBusy()).toBe(false);
+    expect(await guard.run(async () => ({ ok: true }))).toMatchObject({ ok: true });
+  });
+
+  it("releases the command guard after an exception", async () => {
+    const guard = createHumanCommandGuard();
+    await expect(guard.run(async () => { throw new Error("repository-error"); })).rejects.toThrow("repository-error");
+    expect(guard.isBusy()).toBe(false);
+    expect(await guard.run(async () => ({ ok: true }))).toMatchObject({ ok: true });
+  });
+
   it.each([["pending", "pending"], ["approved", "approved"], ["rejected", "rejected"], ["invalidated", "invalidated"]] as const)("reject is based on current pending approval: %s", (_label, state) => {
     expect(canRejectWorkItem(item(), approval(state))).toBe(state === "pending");
   });

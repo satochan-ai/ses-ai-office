@@ -49,7 +49,7 @@ const STATUS_LABEL: Partial<Record<WorkItemStatus, string>> = {
 
 export function projectAgentWorkload(items: WorkItem[], agentId: string, now: string): AgentWorkload {
   const assigned = items
-    .filter(item => item.assignedAgentId === agentId)
+    .filter(item => item.assignedAgentId === agentId || (item.mode === "demo" && item.assignedAgentId === null && ["preparation_recorded", "returned_for_rework"].includes(item.status) && item.execution.lastAgentId === agentId))
     .sort((a, b) => a.id.localeCompare(b.id));
   const cards = assigned.map(item => {
     const decisionCard = projectWorkItemToDecisionCard(item, now);
@@ -58,7 +58,7 @@ export function projectAgentWorkload(items: WorkItem[], agentId: string, now: st
       kind: item.kind,
       kindLabel: KIND_LABEL[item.kind],
       status: item.status,
-      statusLabel: STATUS_LABEL[item.status] ?? item.status,
+      statusLabel: item.missingInfo.some(info => info.status === "open") ? "情報不足" : STATUS_LABEL[item.status] ?? item.status,
       bucket: decisionCard?.bucket ?? null,
       needsHumanDecision: decisionCard?.nextAction?.ownerType === "human" || item.nextAction?.ownerType === "human",
       nextAction: item.nextAction?.label ?? "次の対応を確認する",
@@ -72,7 +72,7 @@ export function projectAgentWorkload(items: WorkItem[], agentId: string, now: st
     needsHumanDecision: cards.filter(card => card.needsHumanDecision).length,
     missingInfo: assigned.filter(item => {
       const card = projectWorkItemToDecisionCard(item, now);
-      return (card?.blockerMissingInfoCount ?? 0) > 0 || item.status === "blocked_missing_info";
+      return item.missingInfo.some(info => info.status === "open") || (card?.blockerMissingInfoCount ?? 0) > 0 || item.status === "blocked_missing_info";
     }).length,
     rework: assigned.filter(item => item.status === "returned_for_rework").length,
     items: cards.slice(0, 3),

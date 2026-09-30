@@ -15,11 +15,21 @@ const item = (id: string, agent: string) => demoResultToWorkItem(result(id, agen
 });
 
 describe("projectAgentWorkload", () => {
+  it("keeps completed and rework demo results with the previous agent without leaking to others", () => {
+    const completed = item("completed", "sales");
+    completed.assignedAgentId = null;
+    completed.status = "returned_for_rework";
+    expect(projectAgentWorkload([completed], "sales", completed.updatedAt)).toMatchObject({ total: 1, rework: 1 });
+    expect(projectAgentWorkload([completed], "other", completed.updatedAt).total).toBe(0);
+    completed.mode = "real";
+    expect(projectAgentWorkload([completed], "sales", completed.updatedAt).total).toBe(0);
+  });
+
   it("filters by official assignedAgentId and keeps human decision metadata", () => {
     const workload = projectAgentWorkload([item("b", "sales"), item("a", "other")], "sales", "2026-09-20T00:00:00.000Z");
     expect(workload.total).toBe(1);
     expect(workload.needsHumanDecision).toBe(1);
-    expect(workload.items[0]).toMatchObject({ kind: "matching-proposal", isDemo: true, statusLabel: "準備完了" });
+    expect(workload.items[0]).toMatchObject({ kind: "matching-proposal", isDemo: true, statusLabel: "情報不足" });
   });
 
   it("returns an empty workload for an agent with no assigned items", () => {

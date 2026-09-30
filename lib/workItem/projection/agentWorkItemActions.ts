@@ -13,6 +13,22 @@ export function canReturnForRework(workItem: WorkItem): boolean {
 
 export function hasCommandReason(reason: string): boolean { return reason.trim().length > 0; }
 
+type HumanCommandResult = { ok: true } | { ok: false; message: string };
+
+/** 詳細パネルの開閉より長く生存する、Visual Officeの実行guard。 */
+export function createHumanCommandGuard() {
+  let busy = false;
+  return {
+    isBusy: () => busy,
+    async run(action: () => Promise<HumanCommandResult>): Promise<HumanCommandResult> {
+      if (busy) return { ok: false, message: "処理中です。完了までお待ちください" };
+      busy = true;
+      try { return await action(); }
+      finally { busy = false; }
+    },
+  };
+}
+
 export type WorkItemActionState = "idle" | "editing" | "submitting" | "success" | "error";
 export function nextActionState(current: WorkItemActionState, event: "edit" | "submit" | "success" | "error" | "cancel"): WorkItemActionState {
   if (event === "cancel") return "idle";

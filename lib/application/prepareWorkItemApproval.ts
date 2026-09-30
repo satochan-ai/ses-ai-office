@@ -12,10 +12,10 @@ export function approvalSnapshotForWorkItem(item: WorkItem): ApprovalSnapshot {
 }
 
 export async function prepareWorkItemApproval(item: WorkItem, repository: WorkItemRepository, at: string): Promise<Approval | null> {
-  if (!item.approvalRequired || item.currentApprovalId || item.proposalDecisions.some(decision => decision.readiness !== "ready_for_human_review")) return null;
+  if (!item.approvalRequired || item.currentApprovalId || item.status === "returned_for_rework" || item.missingInfo.some(info => info.status === "open") || item.proposalDecisions.some(decision => decision.readiness !== "ready_for_human_review")) return null;
   const snapshot = approvalSnapshotForWorkItem(item);
   const approvalId = `approval:${item.id}`;
-  const updated: WorkItem = { ...item, currentDeliverableId: snapshot.deliverable.id, currentApprovalId: approvalId, updatedAt: at };
+  const updated: WorkItem = { ...item, status: "awaiting_approval", currentDeliverableId: snapshot.deliverable.id, currentApprovalId: approvalId, updatedAt: at };
   await repository.saveWorkItem(updated);
   const approval = createApproval({ id: approvalId, workItemId: item.id, targetDeliverableId: snapshot.deliverable.id, targetDeliverableVersion: 1, targetDeliverableHash: snapshot.deliverable.hash, targetDecisionSnapshotHash: hashDecisionSnapshot(snapshot.decision), requestedBy: { type: "agent", id: item.assignedAgentId ?? "demo-agent" }, requestedAt: at, scope: { fields: ["proposalRoute", "personIntent", "availabilityStart", "duplicateProposalStatus", "disclosureScope", "decisionEvidence"], permits: ["prepare-only"], conditions: ["human review required"] }, expiresAt: "2099-12-31T00:00:00.000Z", supersedesApprovalId: null });
   await repository.saveApproval(approval);

@@ -13,6 +13,7 @@ import { v3Floors } from "@/data/officeV3ClaudeOrg";
 import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
 import { readOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import { projectAgentWorkload } from "@/lib/workItem/projection/agentWorkload";
+import { createHumanCommandGuard } from "@/lib/workItem/projection/agentWorkItemActions";
 import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
 import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
 import { executeWorkItemCommandUseCase } from "@/lib/application/executeWorkItemCommand";
@@ -52,13 +53,28 @@ export default function ClaudeOfficeV3() {
   const [approvalStates, setApprovalStates] = useState<Record<string, import("@/types/approval").Approval>>({});
   const repositoryRef = useRef<ReturnType<typeof createSessionStorageWorkItemRepository> | null>(null);
   const bootstrapStartedRef = useRef(false);
+  const humanCommandGuardRef = useRef(createHumanCommandGuard());
+  const [humanCommandBusy, setHumanCommandBusy] = useState(false);
   const demo = useOfficeV3ClaudeDemo();
+
+  const runHumanCommand = useCallback(async (action: Parameters<ReturnType<typeof createHumanCommandGuard>["run"]>[0]) => {
+    const guard = humanCommandGuardRef.current;
+    if (guard.isBusy()) return guard.run(action);
+    setHumanCommandBusy(true);
+    try { return await guard.run(action); }
+    finally { setHumanCommandBusy(false); }
+  }, []);
 
   useEffect(() => {
     if (bootstrapStartedRef.current) return;
     bootstrapStartedRef.current = true;
     if (isHumanLoopQaSeedEnabled(window.location.search, process.env.NODE_ENV)) {
-      if (new URLSearchParams(window.location.search).get("qaReset") === "human-loop") resetHumanLoopDemoSeed(window.sessionStorage);
+      if (new URLSearchParams(window.location.search).get("qaReset") === "human-loop") {
+        resetHumanLoopDemoSeed(window.sessionStorage);
+        const url = new URL(window.location.href);
+        url.searchParams.delete("qaReset");
+        window.history.replaceState(window.history.state, "", url);
+      }
       seedHumanLoopDemoResult();
     }
     const store = readOfficeV3DemoResultStore();
@@ -184,8 +200,8 @@ export default function ClaudeOfficeV3() {
   const selected = views.find(view => view.placement.agentId === selectedId) ?? null;
   const selectedWorkload = selected ? workloads[selected.placement.agentId] : undefined;
   const isHumanSeatSelected = selectedId === HUMAN_SEAT_ID;
-  const close = useCallback(() => setSelectedId(null), []);
-  const select = useCallback((agentId: string) => setSelectedId(current => (current === agentId ? null : agentId)), []);
+  const close = useCallback(() => { if (!humanCommandGuardRef.current.isBusy()) setSelectedId(null); }, []);
+  const select = useCallback((agentId: string) => { if (!humanCommandGuardRef.current.isBusy()) setSelectedId(current => (current === agentId ? null : agentId)); }, []);
 
   // --- Step4: フロア別レイアウトデータの選択。
   //   1f/2f/3f はそれぞれ独立した V3FloorLayout（現状は 2F/3F=現行複製ベース）。
@@ -308,7 +324,7 @@ export default function ClaudeOfficeV3() {
             />
           </div>
           {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} onResolveMissingInfo={resolveMissingInfo} onApproveWorkItem={approveWorkItem} onRejectOrRework={rejectOrRework} />
+            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} commandBusy={humanCommandBusy} onResolveMissingInfo={(...args) => runHumanCommand(() => resolveMissingInfo(...args))} onApproveWorkItem={(...args) => runHumanCommand(() => approveWorkItem(...args))} onRejectOrRework={(...args) => runHumanCommand(() => rejectOrRework(...args))} />
           ) : isHumanSeatSelected ? (
             <HumanSeatPanel
               seat={v3HumanSeat}
