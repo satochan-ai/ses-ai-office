@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import ClaudeOfficeV3 from "@/components/office-v3-claude/ClaudeOfficeV3";
 
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function OfficeV3ClaudePage() {
-  return <ClaudeOfficeV3 />;
+  return <Suspense fallback={<p role="status">Visual Officeを読み込み中…</p>}><ClaudeOfficeV3 /></Suspense>;
 }

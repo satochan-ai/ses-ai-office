@@ -23,7 +23,7 @@ type ResolveHandler = (workItemId: string, missingInfoId: string, value: Missing
 type ApproveHandler = (workItemId: string, approvalId: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 type RejectReworkHandler = (workItemId: string, mode: "reject" | "rework", reason: string) => Promise<{ ok: true } | { ok: false; message: string }>;
 
-export default function AgentDetailPanel({ view, onClose, workload, approvalStates, commandBusy = false, onResolveMissingInfo, onApproveWorkItem, onRejectOrRework }: { view: V3AgentView; onClose: () => void; workload?: AgentWorkload; approvalStates?: Record<string, Approval>; commandBusy?: boolean; onResolveMissingInfo?: ResolveHandler; onApproveWorkItem?: ApproveHandler; onRejectOrRework?: RejectReworkHandler }) {
+export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, workload, approvalStates, commandBusy = false, onResolveMissingInfo, onApproveWorkItem, onRejectOrRework }: { view: V3AgentView; focusedWorkItemId?: string | null; onClose: () => void; workload?: AgentWorkload; approvalStates?: Record<string, Approval>; commandBusy?: boolean; onResolveMissingInfo?: ResolveHandler; onApproveWorkItem?: ApproveHandler; onRejectOrRework?: RejectReworkHandler }) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [selectedMissing, setSelectedMissing] = useState<{ workItemId: string; id: string; field: string } | null>(null);
@@ -128,7 +128,7 @@ export default function AgentDetailPanel({ view, onClose, workload, approvalStat
               {workload.items.map(item => (
                 <li key={item.id} className={s.workloadItem}>
                   <div className={s.workloadMeta}>
-                    <strong>{item.kindLabel}</strong>
+                    <strong>{item.kindLabel}{item.id === focusedWorkItemId ? <small> 選択中</small> : null}</strong>
                     <span>{item.statusLabel}</span>
                   </div>
                   <p>{item.nextAction}</p>

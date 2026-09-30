@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { buildFocusedAgentWorkload, resolveVisualOfficeTarget } from "@/lib/workItem/ui/visualOfficeTarget";
 import { Building2, LayoutDashboard, MousePointerClick, Sparkles } from "lucide-react";
 import { officeAgents } from "@/data/office";
 import { v3ClaudeOnlyAgents } from "@/data/officeV3ClaudeAgents";
@@ -44,6 +46,12 @@ const FLOOR_TABS: { id: V3FloorView; label: string; sub: string }[] = [
 ];
 
 export default function ClaudeOfficeV3() {
+  const targetId = useSearchParams().get("workItemId");
+  const [focusedWorkItemId, setFocusedWorkItemId] = useState<string | null>(null);
+  const [targetMessage, setTargetMessage] = useState<string | null>(null);
+  const [bootstrapReady, setBootstrapReady] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState(false);
+  const resolvedQueryRef = useRef<string | null | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [area, setArea] = useState<V3AreaId>("all");
   // floor（組織上の階）と area（1枚の物理フロア内のズーム）は完全に別state。統合しない。
@@ -82,14 +90,27 @@ export default function ClaudeOfficeV3() {
     const now = new Date().toISOString();
     const repository = createSessionStorageWorkItemRepository(window.sessionStorage);
     repositoryRef.current = repository;
-    void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async () => {
+    void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async initialized => {
+      if (!initialized.ok) throw new Error(initialized.code);
       const current = await repository.listWorkItems();
       for (const item of current) await prepareWorkItemApproval(item, repository, now);
       const refreshed = await repository.listWorkItems();
       const approvals = await Promise.all(refreshed.flatMap(item => item.currentApprovalId ? [repository.getApproval(item.currentApprovalId)] : []));
       setWorkItems(refreshed); setApprovalStates(Object.fromEntries(approvals.filter((approval): approval is NonNullable<typeof approval> => approval !== null).map(approval => [approval.workItemId, approval])));
-    });
+      setBootstrapReady(true);
+    }).catch(() => setBootstrapError(true));
   }, []);
+
+  useEffect(() => {
+    if (!bootstrapReady || humanCommandBusy || resolvedQueryRef.current === targetId) return;
+    resolvedQueryRef.current = targetId;
+    setFocusedWorkItemId(null);
+    setTargetMessage(null);
+    if (targetId === null) { setSelectedId(null); return; }
+    const target = resolveVisualOfficeTarget(workItems, targetId);
+    if (target.ok) { setSelectedId(target.agentId); setFocusedWorkItemId(target.workItemId); }
+    else { setSelectedId(null); setTargetMessage(target.message); }
+  }, [bootstrapReady, humanCommandBusy, targetId, workItems]);
 
   const resolveMissingInfo = useCallback(async (workItemId: string, missingInfoId: string, value: import("@/types/workItemResolution").MissingInfoResolutionValue) => {
     const repository = repositoryRef.current;
@@ -198,10 +219,10 @@ export default function ClaudeOfficeV3() {
     projectAgentWorkload(workItems, view.placement.agentId, workloadNow),
   ])), [views, workItems, workloadNow]);
   const selected = views.find(view => view.placement.agentId === selectedId) ?? null;
-  const selectedWorkload = selected ? workloads[selected.placement.agentId] : undefined;
+  const selectedWorkload = selected ? buildFocusedAgentWorkload(workloads[selected.placement.agentId], workItems, focusedWorkItemId, workloadNow) : undefined;
   const isHumanSeatSelected = selectedId === HUMAN_SEAT_ID;
-  const close = useCallback(() => { if (!humanCommandGuardRef.current.isBusy()) setSelectedId(null); }, []);
-  const select = useCallback((agentId: string) => { if (!humanCommandGuardRef.current.isBusy()) setSelectedId(current => (current === agentId ? null : agentId)); }, []);
+  const close = useCallback(() => { if (!humanCommandGuardRef.current.isBusy()) { setSelectedId(null); setFocusedWorkItemId(null); } }, []);
+  const select = useCallback((agentId: string) => { if (!humanCommandGuardRef.current.isBusy()) { setFocusedWorkItemId(null); setSelectedId(current => (current === agentId ? null : agentId)); } }, []);
 
   // --- Step4: フロア別レイアウトデータの選択。
   //   1f/2f/3f はそれぞれ独立した V3FloorLayout（現状は 2F/3F=現行複製ベース）。
@@ -324,7 +345,7 @@ export default function ClaudeOfficeV3() {
             />
           </div>
           {selected ? (
-            <AgentDetailPanel view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} commandBusy={humanCommandBusy} onResolveMissingInfo={(...args) => runHumanCommand(() => resolveMissingInfo(...args))} onApproveWorkItem={(...args) => runHumanCommand(() => approveWorkItem(...args))} onRejectOrRework={(...args) => runHumanCommand(() => rejectOrRework(...args))} />
+            <AgentDetailPanel focusedWorkItemId={focusedWorkItemId} view={selected} onClose={close} workload={selectedWorkload} approvalStates={approvalStates} commandBusy={humanCommandBusy} onResolveMissingInfo={(...args) => runHumanCommand(() => resolveMissingInfo(...args))} onApproveWorkItem={(...args) => runHumanCommand(() => approveWorkItem(...args))} onRejectOrRework={(...args) => runHumanCommand(() => rejectOrRework(...args))} />
           ) : isHumanSeatSelected ? (
             <HumanSeatPanel
               seat={v3HumanSeat}
@@ -422,6 +443,7 @@ export default function ClaudeOfficeV3() {
         </nav>
       ) : null}
 
+      {bootstrapError ? <p role="alert">WorkItemを読み込めませんでした。再読み込みしてください。</p> : targetMessage ? <p role="status">{targetMessage}</p> : null}
       <main className={`${s.stage} ${floorView === "building" ? s.stageBuilding : ""}`}>
         {floorView === "building" ? (
           <>
