@@ -19,7 +19,7 @@ import type { DemoStoredResult } from "@/types/demo";
 import { DEMO_STORAGE_KEY } from "@/data/demoScenario";
 import DecisionQueuePanel from "@/components/dashboard/DecisionQueuePanel";
 import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
-import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
+import { createWorkItemRepository } from "@/lib/repositories/createWorkItemRepository";
 import { projectWorkItemsToDecisionQueue } from "@/lib/workItem/projection/dashboard";
 import type { DecisionQueue } from "@/types/decisionQueue";
 
@@ -160,7 +160,7 @@ export default function Dashboard() {
       decisionQueueBootstrap.current = (async () => {
         const results = store ? Object.values(store.results).filter((result): result is NonNullable<typeof result> => result != null) : [];
         const now = new Date().toISOString();
-        const repository = createSessionStorageWorkItemRepository(window.sessionStorage);
+        const repository = createWorkItemRepository({ storage: window.sessionStorage });
         const initialized = await initializeDemoWorkItemsFromResults(results, repository, { now });
         if (!initialized.ok) throw new Error(initialized.code);
         const workItems = await repository.listWorkItems();

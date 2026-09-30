@@ -16,13 +16,14 @@ import { useOfficeV3ClaudeDemo } from "@/hooks/useOfficeV3ClaudeDemo";
 import { readOfficeV3DemoResultStore } from "@/lib/officeV3DemoResult";
 import { projectAgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import { createHumanCommandGuard } from "@/lib/workItem/projection/agentWorkItemActions";
-import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
+import { createWorkItemRepository } from "@/lib/repositories/createWorkItemRepository";
 import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
 import { executeWorkItemCommandUseCase } from "@/lib/application/executeWorkItemCommand";
 import { prepareWorkItemApproval, approvalSnapshotForWorkItem } from "@/lib/application/prepareWorkItemApproval";
 import { isHumanLoopQaSeedEnabled, resetHumanLoopDemoSeed, seedHumanLoopDemoResult } from "@/lib/runtime/demoQaSeed";
 import type { WorkItemCommand } from "@/types/workItemCommand";
 import type { WorkItem } from "@/types/workItem";
+import type { WorkItemRepository } from "@/types/workItemRepository";
 import type { V3AgentPlacement, V3AgentView, V3AreaId, V3FloorView } from "@/types/officeV3Claude";
 import AgentDetailPanel from "./AgentDetailPanel";
 import BuildingOverview from "./BuildingOverview";
@@ -59,7 +60,7 @@ export default function ClaudeOfficeV3() {
   const [compact, setCompact] = useState(false);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [approvalStates, setApprovalStates] = useState<Record<string, import("@/types/approval").Approval>>({});
-  const repositoryRef = useRef<ReturnType<typeof createSessionStorageWorkItemRepository> | null>(null);
+  const repositoryRef = useRef<WorkItemRepository | null>(null);
   const bootstrapStartedRef = useRef(false);
   const humanCommandGuardRef = useRef(createHumanCommandGuard());
   const [humanCommandBusy, setHumanCommandBusy] = useState(false);
@@ -88,7 +89,7 @@ export default function ClaudeOfficeV3() {
     const store = readOfficeV3DemoResultStore();
     const results = store ? Object.values(store.results).filter((result): result is NonNullable<typeof result> => result !== undefined) : [];
     const now = new Date().toISOString();
-    const repository = createSessionStorageWorkItemRepository(window.sessionStorage);
+    const repository = createWorkItemRepository({ storage: window.sessionStorage });
     repositoryRef.current = repository;
     void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async initialized => {
       if (!initialized.ok) throw new Error(initialized.code);
