@@ -1,9 +1,51 @@
 import { describe, expect, it } from "vitest";
 import { projectWorkItemToDecisionCard, projectWorkItemsToDecisionQueue } from "./dashboard";
 import type { WorkItem, WorkItemStatus } from "@/types/workItem";
+import { initializeDemoWorkItemsFromResults } from "@/lib/application/initializeDemoWorkItems";
+import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
+import { QA_SEED_RESULT } from "@/lib/runtime/demoQaSeed";
 
 const base = (status: WorkItemStatus = "needs_human_input", overrides: Partial<WorkItem> = {}): WorkItem => ({ id: "w1", kind: "opportunity_proposal", source: { type: "manual", ref: "x" }, sourceVersion: "1", createdAt: "2026-09-19T00:00:00.000Z", updatedAt: "2026-09-19T00:00:00.000Z", assignedAgentId: "a", assignedHumanId: "h", relations: { opportunityIds: ["opp-1"], personIds: ["p"], partnerIds: [], clientIds: [], companyIds: [], parentWorkItemId: null, supersededByWorkItemId: null }, status, nextAction: { kind: "provide_human_input", ownerType: "human" }, dueAt: null, missingInfo: [], conflicts: [], evidenceIds: ["ev"], proposalDecisions: [], currentDeliverableId: null, approvalRequired: true, currentApprovalId: null, execution: { attempt: 1, lastAgentId: null, lastError: null, resumeStatus: null }, mode: "demo", schemaVersion: 1, ...overrides });
 const now = "2026-09-19T12:00:00.000Z";
+class FakeStorage {
+  private values = new Map<string, string>();
+  getItem(key: string) { return this.values.get(key) ?? null; }
+  setItem(key: string, value: string) { this.values.set(key, value); }
+}
+
+describe("Dashboard repository input", () => {
+  it("initializes a matching Result and projects its persisted missing information", async () => {
+    const repository = createSessionStorageWorkItemRepository(new FakeStorage());
+    expect(await initializeDemoWorkItemsFromResults([QA_SEED_RESULT], repository, { now })).toMatchObject({ ok: true, created: 1 });
+    const items = await repository.listWorkItems();
+    expect(items).toHaveLength(1);
+    expect(projectWorkItemsToDecisionQueue(items, now).cards[0]).toMatchObject({ bucket: "missing_info", missingInfoCount: 6 });
+  });
+
+  it.each(["resolved", "approve", "reject", "return", "empty-result"] as const)("preserves saved Human state across instances and reinitialization: %s", async scenario => {
+    const storage = new FakeStorage();
+    const repository = createSessionStorageWorkItemRepository(storage);
+    await initializeDemoWorkItemsFromResults([QA_SEED_RESULT], repository, { now });
+    const initial = (await repository.listWorkItems())[0];
+    const saved: WorkItem = {
+      ...initial,
+      missingInfo: initial.missingInfo.map(info => ({ ...info, status: "resolved", resolvedAt: now })),
+      proposalDecisions: initial.proposalDecisions.map(decision => ({ ...decision, readiness: "ready_for_human_review", routeStatus: "clear", intentStatus: "confirmed", duplicateStatus: "none", startDateStatus: "matched", disclosureStatus: "defined" })),
+      status: scenario === "reject" || scenario === "return" ? "returned_for_rework" : scenario === "approve" ? "preparation_recorded" : "awaiting_approval",
+      nextAction: scenario === "reject" || scenario === "return" ? { kind: "run_agent", ownerType: "agent" } : scenario === "approve" ? { kind: "close", ownerType: "system" } : { kind: "approve_or_reject", ownerType: "human" },
+      currentApprovalId: scenario === "return" ? null : "approval:wi-demo-matching-proposal",
+      ...(scenario === "return" ? { reworkInfo: { reason: "修正が必要", returnedAt: now, returnedBy: "demo-human" } } : {}),
+    };
+    await repository.saveWorkItem(saved);
+    const recreated = createSessionStorageWorkItemRepository(storage);
+    expect(await initializeDemoWorkItemsFromResults(scenario === "empty-result" ? [] : [QA_SEED_RESULT], recreated, { now })).toMatchObject({ ok: true, created: 0 });
+    const items = await recreated.listWorkItems();
+    expect(items).toEqual([saved]);
+    const queue = projectWorkItemsToDecisionQueue(items, now);
+    if (scenario === "resolved" || scenario === "empty-result") expect(queue.cards).toMatchObject([{ bucket: "awaiting_approval", blockerMissingInfoCount: 0 }]);
+    else expect(queue.cards).toEqual([]);
+  });
+});
 describe("dashboard decision queue projection", () => {
   it.each(["failed_execution", "failed_intake"] as const)("projects %s to execution_failed", status => expect(projectWorkItemToDecisionCard(base(status), now)?.bucket).toBe("execution_failed"));
   it("uses bucket priority and excludes terminal work", () => {
