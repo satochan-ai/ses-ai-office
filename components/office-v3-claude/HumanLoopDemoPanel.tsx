@@ -3,7 +3,7 @@ import type { WorkItem } from "@/types/workItem";
 import type { Approval } from "@/types/approval";
 import { projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 import s from "./OfficeV3.module.css";
-import { NEW_CLIENT_DRAFT, VISUAL_DEMO_SCENARIOS } from "@/lib/application/visualOfficeHumanLoopDemo";
+import { NEW_CLIENT_DRAFT, BP_PREPARATION_MEMO, VISUAL_DEMO_SCENARIOS } from "@/lib/application/visualOfficeHumanLoopDemo";
 const LABELS = { idle: "待機", working: "作業中", handoff: "引き継ぎ", waiting_human: "Human待ち", reviewing: "確認中", completed: "完了" };
 export default function HumanLoopDemoPanel({ scenarioId, onScenarioChange, item, approval, frame, playing, busy, error, frames, names, onStart, onOpen, onReplay }: { scenarioId: string; onScenarioChange: (id: string) => void; item?: WorkItem; approval?: Approval; frame?: ActivityFrame; playing: boolean; busy: boolean; error: string | null; frames: ActivityFrame[]; names: Record<string, string>; onStart: () => void; onOpen: () => void; onReplay: () => void }) {
   const live = projectAgentActivity(item, approval), shown = playing && frame ? frame : live;
@@ -12,7 +12,7 @@ export default function HumanLoopDemoPanel({ scenarioId, onScenarioChange, item,
     <div className={s.humanLoopDemoHeading}><strong>AI業務デモ</strong><small>架空データ・外部送信なし</small></div>
     <label>業務シナリオ <select value={scenarioId} disabled={busy} onChange={event => onScenarioChange(event.target.value)}>{VISUAL_DEMO_SCENARIOS.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}</select></label>
     <p>{VISUAL_DEMO_SCENARIOS.find(scenario => scenario.id === scenarioId)?.description}</p>
-    <p>{scenarioId === "outreach" ? "企業整理 → 接点確認 → 文案準備 → Human確認" : "案件整理 → 候補者比較 → Human回答 → 提案準備 → Human確認"}</p>
+    <p>{scenarioId === "bp" ? "BP情報整理 → 営業Mgrへ引き継ぎ → 面談準備 → Human確認" : scenarioId === "outreach" ? "企業整理 → 接点確認 → 文案準備 → Human確認" : "案件整理 → 候補者比較 → Human回答 → 提案準備 → Human確認"}</p>
     {!item ? <button type="button" disabled={busy} onClick={onStart}>AI業務デモを開始</button> : <>
       <div className={s.humanLoopActivity} role="status" aria-live="polite"><b>{LABELS[shown.activity]}</b><strong>{shown.agentId ? names[shown.agentId] : "Human"}</strong><span>{shown.text}</span></div>
       {playing ? <small>Demo工程を再生中。保存済み状態：{live.text}</small> : null}
@@ -25,6 +25,19 @@ export default function HumanLoopDemoPanel({ scenarioId, onScenarioChange, item,
         <p>{NEW_CLIENT_DRAFT.body.map(line => <span key={line}>{line}<br /></span>)}</p>
         <strong>確認事項・注意</strong><ul>{NEW_CLIENT_DRAFT.checks.map(check => <li key={check}>{check}</li>)}</ul>
         <p>この確認は送信許可ではありません。準備した文案の内容確認です。Rejectは修正・再作業を意味します。</p>
+      </div> : null}
+      {item.kind === "bp-alliance" ? <div className={s.humanLoopQuestion}>
+        <strong>面談準備のみ・未予約・未送信（固定Demo）</strong>
+        <p>{BP_PREPARATION_MEMO.company}</p><p>得意領域：{BP_PREPARATION_MEMO.specialty}</p>
+        <p>要員傾向：{BP_PREPARATION_MEMO.people}</p><p>案件傾向：{BP_PREPARATION_MEMO.projects}</p><p>過去接点・関係：{BP_PREPARATION_MEMO.history}</p>
+        <details><summary>協業候補として整理した理由・面談準備メモ</summary>
+          <strong>整理した理由</strong><ul>{BP_PREPARATION_MEMO.reasons.map(value => <li key={value}>{value}</li>)}</ul>
+          <strong>協業テーマ</strong><ul>{BP_PREPARATION_MEMO.themes.map(value => <li key={value}>{value}</li>)}</ul>
+          <strong>当日確認したい質問</strong><ul>{BP_PREPARATION_MEMO.questions.map(value => <li key={value}>{value}</li>)}</ul>
+          <strong>相手に伝える内容案</strong><ul>{BP_PREPARATION_MEMO.share.map(value => <li key={value}>{value}</li>)}</ul>
+          <strong>開示を避ける情報</strong><ul>{BP_PREPARATION_MEMO.avoid.map(value => <li key={value}>{value}</li>)}</ul>
+        </details>
+        <p>準備メモの内容確認です。面談予約・紹介・外部送信の許可ではありません。Rejectはメモの修正・再作業を意味します。</p>
       </div> : null}
       {!playing && !open.length ? <button type="button" disabled={busy} onClick={onOpen}>{approval?.state === "pending" ? "Human確認を開く" : "保存済みの仕事を確認"}</button> : null}
       {!playing && frames.length ? <button type="button" disabled={busy} onClick={onReplay}>工程をもう一度見る</button> : null}

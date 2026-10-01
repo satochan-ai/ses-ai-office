@@ -31,7 +31,7 @@ import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import HumanLoopDemoPanel from "./HumanLoopDemoPanel";
-import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, VISUAL_DEMO_SCENARIOS, startVisualNewClientDemo } from "@/lib/application/visualOfficeHumanLoopDemo";
+import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, VISUAL_DEMO_SCENARIOS, startVisualNewClientDemo, startVisualBpDemo } from "@/lib/application/visualOfficeHumanLoopDemo";
 import { nextPresentationIndex, projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 import s from "./OfficeV3.module.css";
 
@@ -240,7 +240,7 @@ export default function ClaudeOfficeV3() {
     await runHumanCommand(async () => {
       if (!repositoryRef.current) return { ok: false, message: "保存先を準備中です" };
       try {
-        const frames = await (visualScenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
+        const frames = await (visualScenarioId === "bp" ? startVisualBpDemo : visualScenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
         const latest = await repositoryRef.current.listWorkItems();
         setWorkItems(latest);
         const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repositoryRef.current!.getApproval(item.currentApprovalId)] : []));

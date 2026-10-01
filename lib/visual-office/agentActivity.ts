@@ -14,6 +14,13 @@ function projectBaseActivity(item: WorkItem | undefined, approval?: Approval): A
 }
 export function projectAgentActivity(item: WorkItem | undefined, approval?: Approval): ActivityFrame {
   const frame = projectBaseActivity(item, approval);
+  if (item?.kind === "bp-alliance") {
+    const text = frame.activity === "completed" ? "Human面談準備確認完了（予約・外部送信なし）"
+      : item.status === "returned_for_rework" ? "準備メモの修正が必要です"
+      : frame.activity === "waiting_human" ? "面談準備メモ完成・Human確認待ち"
+      : item.assignedAgentId === "bp" ? "BP企業の特徴を整理中…" : "協業テーマと準備メモを確認中…";
+    return { ...frame, text };
+  }
   if (item?.kind !== "new-client-outreach") return frame;
   const text = frame.activity === "completed" ? "Human文案確認完了（未送信）"
     : item.status === "returned_for_rework" ? "文案の修正が必要です"

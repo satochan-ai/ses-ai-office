@@ -7,9 +7,11 @@ import { prepareWorkItemApproval } from "./prepareWorkItemApproval";
 import { projectAgentActivity, projectHandoff, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 export const VISUAL_HUMAN_LOOP_ID = "wi-demo-visual-human-loop";
 export const VISUAL_NEW_CLIENT_ID = "wi-demo-visual-new-client";
+export const VISUAL_BP_ID = "wi-demo-visual-bp-alliance";
 export const VISUAL_DEMO_SCENARIOS = [
   { id: "matching", title: "案件マッチング", description: "開始日をHumanへ確認し、回答後に提案準備へ進みます。", workItemId: VISUAL_HUMAN_LOOP_ID },
   { id: "outreach", title: "新規顧客アプローチ", description: "架空企業の接点を整理し、未送信の文案をHumanが確認します。", workItemId: VISUAL_NEW_CLIENT_ID },
+  { id: "bp", title: "BP協業", description: "架空BPの得意領域と過去接点を整理し、営業Mgrへ引き継いで面談準備メモを作成します。", workItemId: VISUAL_BP_ID },
 ] as const;
 export const NEW_CLIENT_DRAFT = {
   company: "架空企業：デモ青葉システム株式会社", industry: "業務システム開発（Demo）",
@@ -18,6 +20,43 @@ export const NEW_CLIENT_DRAFT = {
   body: ["情報システム部 ご担当者様", "以前の名刺交換をきっかけに、ご連絡の文案を準備しました。", "開発体制について情報交換の機会を検討いただければ幸いです。", "具体案件や人材の提案をお約束する内容ではありません。"],
   checks: ["過去接点・担当部署の確認", "表現と開示範囲の確認", "具体案件・人材情報を含めない"],
 };
+export const BP_PREPARATION_MEMO = {
+  company: "架空BP：デモ若葉パートナーズ株式会社",
+  specialty: "Java業務システム開発・インフラ運用（固定Demo）",
+  people: "Java開発・インフラ運用経験者の情報交換を想定",
+  projects: "Java保守開発案件の情報が中心という架空設定",
+  history: "3か月前に名刺交換。最終接触も3か月前。関係性：情報交換の接点のみ、協業実績は未確認。",
+  reasons: ["Java保守開発の情報交換テーマがある", "インフラ領域の対応範囲を確認したい", "名刺交換の接点がある（架空設定）"],
+  themes: ["Java保守開発の案件傾向を情報交換", "インフラ運用の対応領域を確認", "情報交換の頻度・窓口を相談"],
+  questions: ["得意なJava案件の工程・規模は？", "インフラ領域で対応できる範囲は？", "情報交換の窓口と希望頻度は？"],
+  share: ["自社の対応領域の概要（Demo）", "確認したい協業テーマ", "個別紹介前にHuman確認が必要なこと"],
+  avoid: ["未承認の顧客名・確定前の単価", "個人を特定できる候補者情報"],
+};
+export async function startVisualBpDemo(repository: WorkItemRepository, at: string): Promise<ActivityFrame[]> {
+  return getWorkItemUnitOfWork(repository).run(async repo => {
+    const existing = await repo.getWorkItem(VISUAL_BP_ID);
+    if (existing) {
+      if (existing.mode !== "demo" || existing.kind !== "bp-alliance" || existing.source.type !== "demo-seed") throw new Error("demo-only");
+      return [];
+    }
+    const item = demoResultToWorkItem({ version: 2, source: "office-v3-claude", mock: true, scenarioId: "bp-alliance", scenarioTitle: "BP協業", completedAt: at, finalAgentId: "bp", finalAgentName: "AIBP開拓担当", resultTitle: "BP面談準備メモ（準備のみ）", resultSummary: JSON.stringify(BP_PREPARATION_MEMO), partnerId: "demo-visual-bp", partnerName: BP_PREPARATION_MEMO.company }, { now: at, createWorkItemId: () => VISUAL_BP_ID });
+    item.evidenceIds = ["demo-evidence:visual-bp-alliance"];
+    const frames: ActivityFrame[] = [projectAgentActivity(item), { agentId: "bp", activity: "reviewing", text: "BPの関係履歴を確認中…" }];
+    const handed = { ...item, assignedAgentId: "manager", execution: { ...item.execution, lastAgentId: "manager" } };
+    const handoff = projectHandoff(item, handed);
+    if (handoff) frames.push(handoff);
+    frames.push({ agentId: "manager", activity: "reviewing", text: "協業テーマを整理中…" }, { agentId: "manager", activity: "working", text: "面談準備メモを作成中…" });
+    await repo.saveWorkItem(handed);
+    // 既に開始したUoWの作業Repositoryを既存preparationへ渡す。
+    const approval = await prepareWorkItemApproval(handed, repo, at, { run: async action => action(repo) });
+    if (!approval) throw new Error("demo-approval-preparation-failed");
+    const current = await repo.getWorkItem(item.id);
+    if (!current) throw new Error("work-item-not-found");
+    await repo.saveWorkItem({ ...current, nextAction: { kind: "approve_or_reject", ownerType: "human", label: "面談準備メモを確認する" } });
+    frames.push(projectAgentActivity((await repo.getWorkItem(item.id))!, approval));
+    return frames;
+  });
+}
 export async function startVisualNewClientDemo(repository: WorkItemRepository, at: string): Promise<ActivityFrame[]> {
   return getWorkItemUnitOfWork(repository).run(async repo => {
     const existing = await repo.getWorkItem(VISUAL_NEW_CLIENT_ID);
