@@ -14,6 +14,16 @@ function projectBaseActivity(item: WorkItem | undefined, approval?: Approval): A
 }
 export function projectAgentActivity(item: WorkItem | undefined, approval?: Approval): ActivityFrame {
   const frame = projectBaseActivity(item, approval);
+  if (item?.id === "wi-demo-visual-candidate" && item.kind === "candidate-screening") {
+    const intent = item.candidateContext?.personIntent.status;
+    const text = intent === "declined" ? "本人意向により停止・このDemoでは準備を進めません"
+      : frame.activity === "completed" ? "Human面談確認メモ確認完了（連絡・予約・提案なし）"
+      : item.status === "returned_for_rework" ? "面談確認メモの修正が必要です"
+      : item.currentApprovalId ? "面談確認メモ完成・Human確認待ち"
+      : intent === "unknown" ? "本人意向：未確認・Human回答待ち"
+      : "本人意向を反映・面談確認事項を整理中…";
+    return { ...frame, text };
+  }
   if (item?.kind === "bp-alliance") {
     const text = frame.activity === "completed" ? "Human面談準備確認完了（予約・外部送信なし）"
       : item.status === "returned_for_rework" ? "準備メモの修正が必要です"

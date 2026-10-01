@@ -8,10 +8,12 @@ import { projectAgentActivity, projectHandoff, type ActivityFrame } from "@/lib/
 export const VISUAL_HUMAN_LOOP_ID = "wi-demo-visual-human-loop";
 export const VISUAL_NEW_CLIENT_ID = "wi-demo-visual-new-client";
 export const VISUAL_BP_ID = "wi-demo-visual-bp-alliance";
+export const VISUAL_CANDIDATE_ID = "wi-demo-visual-candidate";
 export const VISUAL_DEMO_SCENARIOS = [
   { id: "matching", title: "案件マッチング", description: "開始日をHumanへ確認し、回答後に提案準備へ進みます。", workItemId: VISUAL_HUMAN_LOOP_ID },
   { id: "outreach", title: "新規顧客アプローチ", description: "架空企業の接点を整理し、未送信の文案をHumanが確認します。", workItemId: VISUAL_NEW_CLIENT_ID },
   { id: "bp", title: "BP協業", description: "架空BPの得意領域と過去接点を整理し、営業Mgrへ引き継いで面談準備メモを作成します。", workItemId: VISUAL_BP_ID },
+  { id: "candidate", title: "候補者スクリーニング", description: "候補者情報をAI採用担当が整理し、未確認の本人意向をHumanが回答した後、面談確認メモまで準備します。", workItemId: VISUAL_CANDIDATE_ID },
 ] as const;
 export const NEW_CLIENT_DRAFT = {
   company: "架空企業：デモ青葉システム株式会社", industry: "業務システム開発（Demo）",
@@ -143,4 +145,54 @@ export async function resumeVisualHumanLoopDemo(repository: WorkItemRepository, 
     frames.push(projectAgentActivity((await repository.getWorkItem(item.id))!, approval ?? undefined));
   }
   return frames;
+}
+
+export const CANDIDATE_MEMO = {
+  name: "Demo候補者A",
+  skills: "Java・Spring Boot・SQL（固定Demo）", experience: "開発経験5年（固定Demo）",
+  preference: "Javaバックエンド開発・週3日リモート希望", availability: "2026年11月開始希望（固定Demo）", onsite: "週2日まで出社可能という架空設定",
+  confirmed: ["Java・Spring Boot・SQLの経験（固定Demo）", "開発経験5年（固定Demo）", "Javaバックエンド開発を希望", "週3日リモート・週2日まで出社を希望"],
+  unknown: ["具体案件の条件との適合は未確認", "実績・担当工程の詳細は未確認"],
+  questions: ["担当した工程と役割は？", "開始時期・出社条件に変更はありますか？", "次の業務で希望する役割は？"],
+  checks: ["本人意向と希望条件を再確認する", "具体案件の条件・開示範囲を確認する", "外部連絡・提案は別途Human判断が必要"],
+};
+function assertCandidateDemo(item: WorkItem) {
+  if (item.mode !== "demo" || item.kind !== "candidate-screening" || item.source.type !== "demo-seed") throw new Error("demo-only");
+}
+export async function startVisualCandidateDemo(repository: WorkItemRepository, at: string): Promise<ActivityFrame[]> {
+  return getWorkItemUnitOfWork(repository).run(async repo => {
+    const existing = await repo.getWorkItem(VISUAL_CANDIDATE_ID);
+    if (existing) { assertCandidateDemo(existing); return []; }
+    const base = demoResultToWorkItem({ version: 2, source: "office-v3-claude", mock: true, scenarioId: "candidate-screening", scenarioTitle: "候補者スクリーニング", completedAt: at, finalAgentId: "recruit", finalAgentName: "AI採用担当", resultTitle: "面談確認メモ（準備のみ）", resultSummary: "架空候補者の本人意向をHumanへ確認します。", candidateId: "demo-visual-candidate", candidateName: CANDIDATE_MEMO.name }, { now: at, createWorkItemId: () => VISUAL_CANDIDATE_ID });
+    const item: WorkItem = { ...base, status: "needs_human_input", evidenceIds: ["demo-evidence:visual-candidate"], nextAction: { kind: "provide_human_input", ownerType: "human", label: "本人意向を確認する" }, missingInfo: [{ id: "mi-demo-visual-candidate-intent", workItemId: base.id, field: "personIntent", subjectPersonId: base.candidateContext!.personId, question: "本人のSES案件参画意向が未確認です。Humanが確認した結果を回答してください。", status: "open", raisedAt: at, resolvedAt: null }] };
+    await repo.saveWorkItem(item);
+    return [{ agentId: "recruit", activity: "working", text: "候補者の経歴・スキルを整理中…" }, { agentId: "recruit", activity: "reviewing", text: "確認済み情報と未確認情報を分けています・本人意向は未確認" }, projectAgentActivity(item)];
+  });
+}
+export async function resumeVisualCandidateDemo(repository: WorkItemRepository, at: string): Promise<ActivityFrame[]> {
+  return getWorkItemUnitOfWork(repository).run(async repo => {
+    const item = await repo.getWorkItem(VISUAL_CANDIDATE_ID);
+    if (!item) return [];
+    assertCandidateDemo(item);
+    if (!item.candidateContext || item.currentApprovalId || item.status === "returned_for_rework" || item.missingInfo.some(info => info.status === "open")) return [];
+    const intent = item.candidateContext.personIntent.status;
+    if (intent === "unknown") return [];
+    if (intent === "declined") {
+      if (item.nextAction === null) return [];
+      const stopped = { ...item, nextAction: null, updatedAt: at };
+      await repo.saveWorkItem(stopped);
+      return [{ agentId: "recruit", activity: "reviewing", text: "Human回答受領・本人意向：辞退" }, projectAgentActivity(stopped)];
+    }
+    const frames: ActivityFrame[] = [{ agentId: "recruit", activity: "reviewing", text: "本人意向を確認しました" }, { agentId: "recruit", activity: "working", text: "候補者情報を再整理中…" }];
+    const handed = { ...item, assignedAgentId: "proposal", execution: { ...item.execution, lastAgentId: "proposal" } };
+    const handoff = projectHandoff(item, handed); if (handoff) frames.push(handoff);
+    frames.push({ agentId: "proposal", activity: "reviewing", text: "面談時の確認事項を整理中…" });
+    await repo.saveWorkItem(handed);
+    const approval = await prepareWorkItemApproval(handed, repo, at, { run: async action => action(repo) });
+    if (!approval) throw new Error("demo-approval-preparation-failed");
+    const current = (await repo.getWorkItem(item.id))!;
+    const pending = { ...current, nextAction: { kind: "approve_or_reject" as const, ownerType: "human" as const, label: "面談確認メモの内容を確認する" } };
+    await repo.saveWorkItem(pending); frames.push(projectAgentActivity(pending, approval));
+    return frames;
+  });
 }

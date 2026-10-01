@@ -54,9 +54,9 @@ describe("BP面談準備Demo", () => {
   });
 });
 describe("新規顧客文案Demo", () => {
-  it("3シナリオだけを選択対象にし、案件マッチングを先頭にする", () => {
-    expect(VISUAL_DEMO_SCENARIOS.map(scenario => scenario.id)).toEqual(["matching", "outreach", "bp"]);
-    expect(new Set(VISUAL_DEMO_SCENARIOS.map(scenario => scenario.workItemId)).size).toBe(3);
+  it("4シナリオだけを選択対象にし、案件マッチングを先頭にする", () => {
+    expect(VISUAL_DEMO_SCENARIOS.map(scenario => scenario.id)).toEqual(["matching", "outreach", "bp", "candidate"]);
+    expect(new Set(VISUAL_DEMO_SCENARIOS.map(scenario => scenario.workItemId)).size).toBe(4);
   });
   it("既存案件Demoに干渉せず文案をprepare-onlyで準備し、重複しない", async () => {
     const repo = createInMemoryWorkItemRepository();

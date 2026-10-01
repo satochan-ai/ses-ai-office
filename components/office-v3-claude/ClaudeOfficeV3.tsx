@@ -31,7 +31,7 @@ import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import HumanLoopDemoPanel from "./HumanLoopDemoPanel";
-import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, VISUAL_DEMO_SCENARIOS, startVisualNewClientDemo, startVisualBpDemo } from "@/lib/application/visualOfficeHumanLoopDemo";
+import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, VISUAL_DEMO_SCENARIOS, startVisualNewClientDemo, startVisualBpDemo, startVisualCandidateDemo, resumeVisualCandidateDemo, VISUAL_CANDIDATE_ID } from "@/lib/application/visualOfficeHumanLoopDemo";
 import { nextPresentationIndex, projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 import s from "./OfficeV3.module.css";
 
@@ -108,7 +108,8 @@ export default function ClaudeOfficeV3() {
     void initializeDemoWorkItemsFromResults(results, repository, { now }).then(async initialized => {
       if (!initialized.ok) throw new Error(initialized.code);
       const current = await repository.listWorkItems();
-      for (const item of current) await prepareWorkItemApproval(item, repository, now);
+      await resumeVisualCandidateDemo(repository, now);
+      for (const item of current) if (item.id !== VISUAL_CANDIDATE_ID) await prepareWorkItemApproval(item, repository, now);
       const refreshed = await repository.listWorkItems();
       const approvals = await Promise.all(refreshed.flatMap(item => item.currentApprovalId ? [repository.getApproval(item.currentApprovalId)] : []));
       setWorkItems(refreshed); setApprovalStates(Object.fromEntries(approvals.filter((approval): approval is NonNullable<typeof approval> => approval !== null).map(approval => [approval.workItemId, approval])));
@@ -137,13 +138,13 @@ export default function ClaudeOfficeV3() {
       return { ok: false as const, message: messages[result.code] ?? "保存に失敗しました" };
     }
     const refreshed = await repository.listWorkItems();
-    if (workItemId === VISUAL_HUMAN_LOOP_ID) {
+    if (workItemId === VISUAL_HUMAN_LOOP_ID || workItemId === VISUAL_CANDIDATE_ID) {
       try {
-        const frames = await resumeVisualHumanLoopDemo(repository, command.issuedAt);
+        const frames = await (workItemId === VISUAL_CANDIDATE_ID ? resumeVisualCandidateDemo : resumeVisualHumanLoopDemo)(repository, command.issuedAt);
         if (frames.length) { setActivityFrames(frames); setActivityIndex(0); }
       } catch { return { ok: false as const, message: "回答は保存しましたが工程を再開できませんでした。再読み込みしてください。" }; }
     }
-    for (const item of refreshed) if (item.id !== VISUAL_HUMAN_LOOP_ID) await prepareWorkItemApproval(item, repository, command.issuedAt);
+    for (const item of refreshed) if (item.id !== VISUAL_HUMAN_LOOP_ID && item.id !== VISUAL_CANDIDATE_ID) await prepareWorkItemApproval(item, repository, command.issuedAt);
     const latest = await repository.listWorkItems();
     setWorkItems(latest);
     const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repository.getApproval(item.currentApprovalId)] : []));
@@ -240,7 +241,7 @@ export default function ClaudeOfficeV3() {
     await runHumanCommand(async () => {
       if (!repositoryRef.current) return { ok: false, message: "保存先を準備中です" };
       try {
-        const frames = await (visualScenarioId === "bp" ? startVisualBpDemo : visualScenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
+        const frames = await (visualScenarioId === "candidate" ? startVisualCandidateDemo : visualScenarioId === "bp" ? startVisualBpDemo : visualScenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
         const latest = await repositoryRef.current.listWorkItems();
         setWorkItems(latest);
         const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repositoryRef.current!.getApproval(item.currentApprovalId)] : []));
