@@ -7,9 +7,9 @@ export const SHOWCASE_STEPS = [
   { title: "案件を整理", description: "AI営業Mgrが案件条件を整理します。" },
   { title: "担当へ引き継ぎ", description: "AIマッチング担当へ情報を引き継ぎます。" },
   { title: "Humanへ確認", description: "開始日が未確認のため、AIは推測せずHumanへ確認します。" },
-  { title: "回答を反映", description: "Humanが回答した開始日を保存します。" },
+  { title: "回答を反映", description: "Humanが回答した開始日を保存しました。" },
   { title: "AIが再開", description: "回答を反映して条件を確認し、提案担当へ引き継ぎます。" },
-  { title: "内容を確認", description: "AIが準備した内容をHumanが確認します。" },
+  { title: "内容を確認", description: "AIが準備した内容をHumanが最終確認します。" },
 ] as const;
 
 // 業務状態は変更しない。保存済み工程の表示と、現在の保存済み状態を区別する。

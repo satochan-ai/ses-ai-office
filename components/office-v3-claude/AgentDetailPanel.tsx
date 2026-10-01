@@ -122,7 +122,7 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
             <span>人間判断待ち {workload.needsHumanDecision}件</span>
           </div>
           {workload.items.length === 0 ? (
-            <p className={s.workloadEmpty}>現在担当しているWorkItemはありません</p>
+            <p className={s.workloadEmpty}>現在担当している仕事はありません</p>
           ) : (
             <ul className={s.workloadList}>
               {workload.items.map(item => (

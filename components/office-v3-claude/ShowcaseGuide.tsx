@@ -22,7 +22,7 @@ export default function ShowcaseGuide({ progress, playing, paused, hasHistory, o
       <div className={s.showcaseActions}>
         <button type="button" onClick={() => onScenario("outreach")}>新規顧客アプローチ：AIが準備した未送信文案をHumanが確認</button>
         <button type="button" onClick={() => onScenario("bp")}>BP協業：協業テーマと面談準備メモをHumanが確認</button>
-        <button type="button" onClick={() => onScenario("candidate")}>候補者スクリーニング：本人意向をHumanが確認し、AIがその後の整理を再開</button>
+        <button type="button" onClick={() => onScenario("candidate")}>候補者：本人意向をHumanが確認し、AIが整理を再開</button>
       </div>
     </> : <div className={s.showcaseActions}>
       {playing ? <button type="button" onClick={onPause}>{paused ? "続ける" : "演出を止める"}</button> : null}

@@ -17,10 +17,12 @@ export default function HumanLoopDemoPanel({ showcaseMode, paused, onIntro, onGu
       <p>このデモでは外部送信は行いません。</p>
       <div className={s.showcaseActions}><button type="button" disabled={busy} onClick={onGuideStart}>ガイドを開始</button><button type="button" onClick={onGuideExit}>通常Demoとして見る</button></div>
     </div> : <ShowcaseGuide progress={projectShowcaseStep(item, approval, frame, playing, frames[0])} playing={playing} paused={paused} hasHistory={frames.length > 0} onPause={onPause} onExit={onGuideExit} onScenario={onScenarioChange} />}
-    {showcaseMode === "active" ? <p>ガイド中は案件マッチングに固定しています。別の業務を選ぶにはガイドを終了してください。</p> : null}
+    {showcaseMode === "active" ? <p>ガイド中は案件マッチング固定です。変更する場合はガイドを終了してください。</p> : null}
     <label>業務シナリオ <select value={scenarioId} disabled={busy || showcaseMode === "active"} onChange={event => onScenarioChange(event.target.value)}>{VISUAL_DEMO_SCENARIOS.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}</select></label>
-    <p>{VISUAL_DEMO_SCENARIOS.find(scenario => scenario.id === scenarioId)?.description}</p>
-    <p>{scenarioId === "candidate" ? "候補者整理 → 本人意向をHumanへ確認 → 面談確認メモ → Human確認" : scenarioId === "bp" ? "BP情報整理 → 営業Mgrへ引き継ぎ → 面談準備 → Human確認" : scenarioId === "outreach" ? "企業整理 → 接点確認 → 文案準備 → Human確認" : "案件整理 → 候補者比較 → Human回答 → 提案準備 → Human確認"}</p>
+    {showcaseMode !== "active" ? <>
+      <p>{VISUAL_DEMO_SCENARIOS.find(scenario => scenario.id === scenarioId)?.description}</p>
+      <p>{scenarioId === "candidate" ? "候補者整理 → 本人意向をHumanへ確認 → 面談確認メモ → Human確認" : scenarioId === "bp" ? "BP情報整理 → 営業Mgrへ引き継ぎ → 面談準備 → Human確認" : scenarioId === "outreach" ? "企業整理 → 接点確認 → 文案準備 → Human確認" : "案件整理 → 候補者比較 → Human回答 → 提案準備 → Human確認"}</p>
+    </> : null}
     {!item ? <button type="button" disabled={busy} onClick={onStart}>AI業務デモを開始</button> : <>
       <div className={s.humanLoopActivity} role="status" aria-live="polite"><b>{LABELS[shown.activity]}</b><strong>{shown.agentId ? names[shown.agentId] : "Human"}</strong><span>{shown.text}</span></div>
       {playing ? <small>Demo工程を再生中。保存済み状態：{live.text}</small> : null}
