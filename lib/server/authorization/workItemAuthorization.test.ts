@@ -29,16 +29,15 @@ describe("WorkItem authorization policy", () => {
     expect(authorizeWorkItemCommand({ ...base, workItem: { ...workItem, currentApprovalId: null } })).toEqual(denied("approval_not_current"));
     expect(authorizeWorkItemCommand({ ...base, approval: { ...approval, approver: null } })).toEqual(denied("not_approver"));
     expect(authorizeWorkItemCommand({ ...base, approval: { ...approval, approver: { type: "agent", id: "human" } } })).toEqual(denied("not_approver"));
-    expect(authorizeWorkItemCommand({ ...base, context: { ...other, permissions: ["return-work-item", "resolve-missing-info"] } })).toEqual(denied("not_approver"));
+    expect(authorizeWorkItemCommand({ ...base, context: { ...other, permissions: ["resolve-missing-info"] } })).toEqual(denied("not_approver"));
   });
-  it("permits return only for assignment or dedicated permission, including unassigned items", () => {
+  it("permits return only for the assigned Human", () => {
     const base = input({ command: { type: "return-for-rework", workItemId: "w" } });
     expect(authorizeWorkItemCommand(base)).toEqual({ allowed: true });
-    expect(authorizeWorkItemCommand({ ...base, context: other })).toEqual(denied("permission_required"));
-    expect(authorizeWorkItemCommand({ ...base, workItem: { ...workItem, assignedHumanId: null } })).toEqual(denied("permission_required"));
-    expect(authorizeWorkItemCommand({ ...base, context: { ...other, permissions: ["return-work-item"] } })).toEqual({ allowed: true });
-    expect(authorizeWorkItemCommand({ ...base, workItem: { ...workItem, assignedHumanId: null }, context: { ...context, permissions: ["return-work-item"] } })).toEqual({ allowed: true });
-    expect(authorizeWorkItemCommand({ ...base, context: { ...other, permissions: ["resolve-missing-info"] } })).toEqual(denied("permission_required"));
+    expect(authorizeWorkItemCommand({ ...base, context: other })).toEqual(denied("not_assigned"));
+    expect(authorizeWorkItemCommand({ ...base, workItem: { ...workItem, assignedHumanId: null } })).toEqual(denied("not_assigned"));
+    expect(authorizeWorkItemCommand({ ...base, context: { ...other, permissions: ["resolve-missing-info"] } })).toEqual(denied("not_assigned"));
+    expect(authorizeWorkItemCommand({ ...base, workItem: { ...workItem, assignedHumanId: null }, context: { ...context, permissions: ["resolve-missing-info"] } })).toEqual(denied("not_assigned"));
     expect(authorizeWorkItemCommand({ ...base, tenantId: "other" })).toEqual(denied("tenant_mismatch"));
   });
   it("requires existing MissingInfo plus assignment or resolution permission", () => {
@@ -49,7 +48,6 @@ describe("WorkItem authorization policy", () => {
     expect(authorizeWorkItemCommand({ ...base, command: { type: "provide-missing-info", workItemId: "w", missingInfoId: "absent" } })).toEqual(denied("missing_info_not_found"));
     expect(authorizeWorkItemCommand({ ...base, tenantId: "other" })).toEqual(denied("tenant_mismatch"));
     expect(authorizeWorkItemCommand({ ...base, workItem: { ...workItem, assignedHumanId: null } })).toEqual(denied("permission_required"));
-    expect(authorizeWorkItemCommand({ ...base, context: { ...other, permissions: ["return-work-item"] } })).toEqual(denied("permission_required"));
   });
   it.each(["agent", "system"] as const)("rejects %s for every Human command", actorType => {
     const commands: WorkItemAuthorizationInput["command"][] = [
@@ -58,7 +56,7 @@ describe("WorkItem authorization policy", () => {
       { type: "return-for-rework", workItemId: "w" },
       { type: "provide-missing-info", workItemId: "w", missingInfoId: workItem.missingInfo[0].id },
     ];
-    for (const command of commands) expect(authorizeWorkItemCommand(input({ command, context: { ...context, actor: { ...context.actor, actorType }, permissions: ["return-work-item", "resolve-missing-info"] } }))).toEqual(denied("human_actor_required"));
+    for (const command of commands) expect(authorizeWorkItemCommand(input({ command, context: { ...context, actor: { ...context.actor, actorType }, permissions: ["resolve-missing-info"] } }))).toEqual(denied("human_actor_required"));
   });
   it("rejects a mismatched command target before evaluating permissions", () => {
     expect(authorizeWorkItemCommand(input({ command: { type: "return-for-rework", workItemId: "other" } }))).toEqual(denied("command_not_permitted"));
