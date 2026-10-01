@@ -175,6 +175,14 @@ export type ProposalVerdict = "fit" | "unfit" | "unknown";
 export type ProposalReadiness = "ready_for_human_review" | "blocked" | "not_recommended";
 export type RouteStatus = "clear" | "unknown" | "conflict";
 export type IntentStatus = "confirmed" | "declined" | "unknown" | "stale";
+/** このWorkItemの候補者意向。確認者・記録日時は参照先Evidenceで保持する。 */
+export type CandidateContext = {
+  personId: string;
+  personIntent: {
+    status: Extract<IntentStatus, "unknown" | "confirmed" | "declined">;
+    evidenceId: string | null;
+  };
+};
 export type DuplicateStatus = "none" | "possible" | "confirmed" | "unknown";
 export type StartDateStatus = "matched" | "mismatched" | "unknown";
 export type DisclosureStatus = "defined" | "restricted" | "unknown";
@@ -217,6 +225,7 @@ export type WorkItem = {
   conflicts: ConflictInfo[];
   evidenceIds: string[];
   proposalDecisions: ProposalDecision[];
+  candidateContext?: CandidateContext;
   currentDeliverableId: string | null;
   /** MVPでは常にtrue（人間承認を省略する経路は設計しない）。 */
   approvalRequired: true;

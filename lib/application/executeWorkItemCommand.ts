@@ -22,6 +22,7 @@ export async function executeWorkItemCommandUseCase(input: { command: WorkItemCo
       }
       const domain = executeWorkItemCommand(command, { workItem, approvals, approvalSnapshots: input.approvalSnapshots ?? {} });
       if (!domain.ok) return { ok: false, commandId: command.commandId, code: domain.code === "approval-not-found" ? "approval-not-found" : "domain-rejected", message: domain.message };
+      if (workItem.kind === "candidate-screening" && command.type === "provide-missing-info" && command.value.field === "personIntent" && domain.data && typeof domain.data === "object" && "evidenceId" in domain.data && await repositories.getEvidence(domain.data.evidenceId as string)) return { ok: false, commandId: command.commandId, code: "domain-rejected", message: "Evidence already exists." };
       await repositories.saveWorkItem(domain.workItem);
       const approval = domain.data && typeof domain.data === "object" && "approval" in domain.data ? domain.data.approval as Approval : undefined;
       const evidence = domain.data && typeof domain.data === "object" && "evidence" in domain.data ? [domain.data.evidence as Evidence] : [];

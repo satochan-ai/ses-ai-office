@@ -17,6 +17,7 @@ export async function prepareWorkItemApproval(item: WorkItem, repository: WorkIt
   return (unitOfWork ?? getWorkItemUnitOfWork(repository)).run(async repository => {
     const current = await repository.getWorkItem(item.id);
     if (!current) throw new Error("work-item-not-found");
+    if (current.kind === "candidate-screening" && current.candidateContext && current.candidateContext.personIntent.status !== "confirmed") return null;
     if (!current.approvalRequired || current.currentApprovalId || current.status === "returned_for_rework" || current.missingInfo.some(info => info.status === "open") || current.proposalDecisions.some(decision => decision.readiness !== "ready_for_human_review")) return null;
     const snapshot = approvalSnapshotForWorkItem(current);
     const approvalId = `approval:${current.id}`;
