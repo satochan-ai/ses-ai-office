@@ -137,6 +137,7 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
                   {item.missingInfo.filter(info => info.status === "open").length > 0 && onResolveMissingInfo ? (
                     <div className={s.missingInfoForm}>
                       <strong>不足情報 {item.missingInfo.filter(info => info.status === "open").length}件</strong>
+                      <p>{view.name}からHumanへ確認：{item.missingInfo.find(info => info.status === "open")?.question}</p>
                       <ul>{item.missingInfo.filter(info => info.status === "open").map(info => (
                         <li key={info.id}><button type="button" disabled={busy} onClick={() => { setSelectedMissing({ workItemId: item.id, id: info.id, field: info.field }); setChoice(""); setDate(""); setNote(""); setMessage(null); }}>{FIELD_LABEL[info.field] ?? info.field}</button></li>
                       ))}</ul>

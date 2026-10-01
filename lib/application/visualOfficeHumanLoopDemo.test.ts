@@ -1,0 +1,68 @@
+import { describe, it, expect } from "vitest";
+import { createInMemoryWorkItemRepository } from "@/lib/repositories/inMemoryWorkItemRepository";
+import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID } from "./visualOfficeHumanLoopDemo";
+import { executeWorkItemCommandUseCase } from "./executeWorkItemCommand";
+import { projectAgentActivity, nextPresentationIndex } from "@/lib/visual-office/agentActivity";
+import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
+import { approvalSnapshotForWorkItem } from "./prepareWorkItemApproval";
+const at = "2026-10-01T00:00:00.000Z";
+describe("Visual Office Human質問デモ", () => {
+  it("案件整理から引き継ぎ、回答、再開、提案担当、pendingまで既存経路で進む", async () => {
+    const repository = createInMemoryWorkItemRepository();
+    const intro = await startVisualHumanLoopDemo(repository, at);
+    expect(intro.map(frame => frame.activity)).toEqual(["working", "handoff", "working", "waiting_human"]);
+    expect(intro[1].handoff).toEqual({ from: "manager", to: "matching" });
+    let index = 0; for (let i = 0; i < 4; i++) index = nextPresentationIndex(index, intro.length);
+    expect(index).toBe(3);
+    const waiting = (await repository.getWorkItem(VISUAL_HUMAN_LOOP_ID))!;
+    expect(waiting.status).toBe("blocked_missing_info"); expect(waiting.assignedAgentId).toBe("matching"); expect(waiting.missingInfo).toHaveLength(1);
+    expect(projectAgentActivity(waiting).activity).toBe("waiting_human");
+    expect(await startVisualHumanLoopDemo(repository, at)).toEqual([]);
+    expect(await resumeVisualHumanLoopDemo(repository, at)).toEqual([]);
+    const result = await executeWorkItemCommandUseCase({ repositories: repository, command: { type: "provide-missing-info", commandId: "demo-answer", workItemId: waiting.id, missingInfoId: waiting.missingInfo[0].id, actorId: "demo-human", issuedAt: at, value: { field: "availabilityStart", status: "matched", date: "2026-10-01" } }, effectContext: { at, actor: { type: "human", id: "demo-human" } } });
+    expect(result.ok).toBe(true);
+    const resume = await resumeVisualHumanLoopDemo(repository, at);
+    expect(resume.map(frame => frame.activity)).toEqual(["reviewing", "working", "handoff", "waiting_human"]);
+    expect(resume[2].handoff).toEqual({ from: "matching", to: "proposal" });
+    const ready = (await repository.getWorkItem(waiting.id))!;
+    const approval = await repository.getApproval(ready.currentApprovalId!);
+    expect(ready).toMatchObject({ assignedAgentId: "proposal", status: "awaiting_approval" });
+    expect(ready.nextAction).toMatchObject({ ownerType: "human", kind: "approve_or_reject" });
+    expect(approval).toMatchObject({ state: "pending", scope: { permits: ["prepare-only"] } });
+    expect(projectAgentActivity(ready, approval!).text).toContain("Human確認待ち");
+    expect(await startVisualHumanLoopDemo(repository, at)).toEqual([]);
+    expect(await repository.listWorkItems()).toHaveLength(1);
+    expect(await resumeVisualHumanLoopDemo(repository, at)).toEqual([]);
+  });
+  it("real WorkItemを上書きしない", async () => {
+    const repository = createInMemoryWorkItemRepository(); await startVisualHumanLoopDemo(repository, at);
+    const item = (await repository.getWorkItem(VISUAL_HUMAN_LOOP_ID))!; await repository.saveWorkItem({ ...item, mode: "real" });
+    await expect(startVisualHumanLoopDemo(repository, at)).rejects.toThrow("demo-only");
+    expect((await repository.getWorkItem(item.id))?.mode).toBe("real");
+  });
+  it("不一致回答では再判定を進めずApprovalを作らない", async () => {
+    const repo = createInMemoryWorkItemRepository(); await startVisualHumanLoopDemo(repo, at);
+    const item = (await repo.getWorkItem(VISUAL_HUMAN_LOOP_ID))!;
+    await executeWorkItemCommandUseCase({ repositories: repo, command: { type: "provide-missing-info", commandId: "mismatch", workItemId: item.id, missingInfoId: item.missingInfo[0].id, actorId: "demo-human", issuedAt: at, value: { field: "availabilityStart", status: "mismatched", date: "2026-10-01" } }, effectContext: { at, actor: { type: "human", id: "demo-human" } } });
+    expect(await resumeVisualHumanLoopDemo(repo, at)).toEqual([]);
+    expect((await repo.getWorkItem(item.id))?.currentApprovalId).toBeNull();
+  });
+  it.each(["approve-work-item", "reject-work-item", "return-for-rework"] as const)("%sを既存Commandで処理しreload相当でも保持", async type => {
+    const values = new Map<string, string>();
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    const repo = createSessionStorageWorkItemRepository(storage);
+    await startVisualHumanLoopDemo(repo, at);
+    const item = (await repo.getWorkItem(VISUAL_HUMAN_LOOP_ID))!;
+    const context = { at, actor: { type: "human" as const, id: "demo-human" } };
+    await executeWorkItemCommandUseCase({ repositories: repo, command: { type: "provide-missing-info", commandId: "answer", workItemId: item.id, missingInfoId: item.missingInfo[0].id, actorId: "demo-human", issuedAt: at, value: { field: "availabilityStart", status: "matched", date: "2026-10-01" } }, effectContext: context });
+    await resumeVisualHumanLoopDemo(repo, at);
+    const current = (await repo.getWorkItem(item.id))!;
+    const base = { commandId: "decision", workItemId: item.id, actorId: "demo-human", issuedAt: at };
+    const command = type === "approve-work-item" ? { ...base, type, approvalId: current.currentApprovalId! } : type === "reject-work-item" ? { ...base, type, approvalId: current.currentApprovalId!, reason: "Demo再確認" } : { ...base, type, reason: "Demo再確認" };
+    expect((await executeWorkItemCommandUseCase({ repositories: repo, command, approvalSnapshots: { [current.currentApprovalId!]: approvalSnapshotForWorkItem(current) }, effectContext: context })).ok).toBe(true);
+    const reopened = createSessionStorageWorkItemRepository(storage);
+    expect((await reopened.getWorkItem(item.id))?.status).toBe(type === "approve-work-item" ? "preparation_recorded" : "returned_for_rework");
+    expect(await startVisualHumanLoopDemo(reopened, at)).toEqual([]);
+    expect(await reopened.listWorkItems()).toHaveLength(1);
+  });
+});

@@ -1634,3 +1634,15 @@
     transition: none !important;
   }
 }
+
+.humanLoopDemo { margin: 12px 0; padding: 14px 16px; border: 1px solid #bfd0df; border-radius: 12px; background: #f8fbff; color: #25364b; min-width: 0; }
+.humanLoopDemoHeading { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
+.humanLoopDemo p { margin: 8px 0; overflow-wrap: anywhere; }
+.humanLoopDemo button { margin: 6px 8px 6px 0; padding: 8px 12px; border: 1px solid #748ca6; border-radius: 8px; background: white; color: #25364b; cursor: pointer; }
+.humanLoopDemo button:disabled { opacity: .55; cursor: default; }
+.humanLoopDemo button:focus-visible { outline: 3px solid #2b67af; outline-offset: 2px; }
+.humanLoopActivity { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.humanLoopActivity b { padding: 3px 8px; background: #e0ebf8; border-radius: 6px; }
+.humanLoopQuestion { padding: 10px; border-left: 3px solid #98651f; background: #fff5df; margin-top: 8px; }
+.humanLoopHandoff { font-weight: 700; }
+@media (max-width: 600px) { .humanLoopDemo { padding: 12px; } .humanLoopActivity span { flex-basis: 100%; } }

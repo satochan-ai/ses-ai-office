@@ -30,6 +30,9 @@ import BuildingOverview from "./BuildingOverview";
 import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
+import HumanLoopDemoPanel from "./HumanLoopDemoPanel";
+import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID } from "@/lib/application/visualOfficeHumanLoopDemo";
+import { nextPresentationIndex, projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 import s from "./OfficeV3.module.css";
 
 /**
@@ -65,6 +68,16 @@ export default function ClaudeOfficeV3() {
   const humanCommandGuardRef = useRef(createHumanCommandGuard());
   const [humanCommandBusy, setHumanCommandBusy] = useState(false);
   const demo = useOfficeV3ClaudeDemo();
+  const [activityFrames, setActivityFrames] = useState<ActivityFrame[]>([]);
+  const [activityIndex, setActivityIndex] = useState(0);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const activityPlaying = activityFrames.length > 0 && activityIndex < activityFrames.length - 1;
+  const activityFrame = activityFrames[activityIndex];
+  useEffect(() => {
+    if (!activityPlaying) return;
+    const timer = setTimeout(() => setActivityIndex(index => nextPresentationIndex(index, activityFrames.length)), 1200);
+    return () => clearTimeout(timer);
+  }, [activityIndex, activityFrames.length, activityPlaying]);
 
   const runHumanCommand = useCallback(async (action: Parameters<ReturnType<typeof createHumanCommandGuard>["run"]>[0]) => {
     const guard = humanCommandGuardRef.current;
@@ -123,7 +136,13 @@ export default function ClaudeOfficeV3() {
       return { ok: false as const, message: messages[result.code] ?? "保存に失敗しました" };
     }
     const refreshed = await repository.listWorkItems();
-    for (const item of refreshed) await prepareWorkItemApproval(item, repository, command.issuedAt);
+    if (workItemId === VISUAL_HUMAN_LOOP_ID) {
+      try {
+        const frames = await resumeVisualHumanLoopDemo(repository, command.issuedAt);
+        if (frames.length) { setActivityFrames(frames); setActivityIndex(0); }
+      } catch { return { ok: false as const, message: "回答は保存しましたが工程を再開できませんでした。再読み込みしてください。" }; }
+    }
+    for (const item of refreshed) if (item.id !== VISUAL_HUMAN_LOOP_ID) await prepareWorkItemApproval(item, repository, command.issuedAt);
     const latest = await repository.listWorkItems();
     setWorkItems(latest);
     const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repository.getApproval(item.currentApprovalId)] : []));
@@ -213,6 +232,20 @@ export default function ClaudeOfficeV3() {
     views.forEach(view => { map[view.placement.agentId] = view.name; });
     return map;
   }, [views]);
+
+  const visualDemoItem = workItems.find(item => item.id === VISUAL_HUMAN_LOOP_ID);
+  const liveDemoActivity = projectAgentActivity(visualDemoItem, visualDemoItem ? approvalStates[visualDemoItem.id] : undefined);
+  const startActivityDemo = async () => {
+    await runHumanCommand(async () => {
+      if (!repositoryRef.current) return { ok: false, message: "保存先を準備中です" };
+      try {
+        const frames = await startVisualHumanLoopDemo(repositoryRef.current, new Date().toISOString());
+        setWorkItems(await repositoryRef.current.listWorkItems());
+        setActivityFrames(frames); setActivityIndex(0); setActivityError(null); setFloorView("all");
+        return { ok: true };
+      } catch { setActivityError("デモを開始できませんでした。再読み込みしてください。"); return { ok: false, message: "デモを開始できませんでした" }; }
+    });
+  };
 
   const workloadNow = workItems.length > 0 ? workItems[0].updatedAt : new Date().toISOString();
   const workloads = useMemo(() => Object.fromEntries(views.map(view => [
@@ -328,8 +361,8 @@ export default function ClaudeOfficeV3() {
               area={area}
               compact={compact}
               onSelect={select}
-              activeAgentId={demo.activeAgentId}
-              activeStatusText={demo.activeStatusText}
+              activeAgentId={demoBusy ? demo.activeAgentId : activityPlaying ? activityFrame?.agentId : visualDemoItem ? liveDemoActivity.agentId : demo.activeAgentId}
+              activeStatusText={demoBusy ? demo.activeStatusText : activityPlaying ? activityFrame?.text : visualDemoItem ? liveDemoActivity.text : demo.activeStatusText}
               previousAgentId={demo.previousAgentId}
               handoffStepId={demo.currentStep?.id}
               demoStatus={demo.demoStatus}
@@ -445,6 +478,7 @@ export default function ClaudeOfficeV3() {
       ) : null}
 
       {bootstrapError ? <p role="alert">WorkItemを読み込めませんでした。再読み込みしてください。</p> : targetMessage ? <p role="status">{targetMessage}</p> : null}
+      <HumanLoopDemoPanel item={visualDemoItem} approval={visualDemoItem ? approvalStates[visualDemoItem.id] : undefined} frame={activityFrame} playing={activityPlaying} busy={humanCommandBusy || !bootstrapReady || demoBusy} error={activityError} frames={activityFrames} names={agentNames} onStart={() => void startActivityDemo()} onReplay={() => setActivityIndex(0)} onOpen={() => { if (!visualDemoItem || humanCommandBusy) return; setFloorView("all"); setFocusedWorkItemId(visualDemoItem.id); setSelectedId(visualDemoItem.assignedAgentId ?? visualDemoItem.execution.lastAgentId); }} />
       <main className={`${s.stage} ${floorView === "building" ? s.stageBuilding : ""}`}>
         {floorView === "building" ? (
           <>
