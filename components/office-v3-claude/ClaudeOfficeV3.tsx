@@ -31,7 +31,7 @@ import DemoWorkspacePanel from "./DemoWorkspacePanel";
 import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import HumanLoopDemoPanel from "./HumanLoopDemoPanel";
-import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID } from "@/lib/application/visualOfficeHumanLoopDemo";
+import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, VISUAL_DEMO_SCENARIOS, startVisualNewClientDemo } from "@/lib/application/visualOfficeHumanLoopDemo";
 import { nextPresentationIndex, projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 import s from "./OfficeV3.module.css";
 
@@ -68,6 +68,7 @@ export default function ClaudeOfficeV3() {
   const humanCommandGuardRef = useRef(createHumanCommandGuard());
   const [humanCommandBusy, setHumanCommandBusy] = useState(false);
   const demo = useOfficeV3ClaudeDemo();
+  const [visualScenarioId, setVisualScenarioId] = useState("matching");
   const [activityFrames, setActivityFrames] = useState<ActivityFrame[]>([]);
   const [activityIndex, setActivityIndex] = useState(0);
   const [activityError, setActivityError] = useState<string | null>(null);
@@ -233,14 +234,17 @@ export default function ClaudeOfficeV3() {
     return map;
   }, [views]);
 
-  const visualDemoItem = workItems.find(item => item.id === VISUAL_HUMAN_LOOP_ID);
+  const visualDemoItem = workItems.find(item => item.id === VISUAL_DEMO_SCENARIOS.find(scenario => scenario.id === visualScenarioId)?.workItemId);
   const liveDemoActivity = projectAgentActivity(visualDemoItem, visualDemoItem ? approvalStates[visualDemoItem.id] : undefined);
   const startActivityDemo = async () => {
     await runHumanCommand(async () => {
       if (!repositoryRef.current) return { ok: false, message: "保存先を準備中です" };
       try {
-        const frames = await startVisualHumanLoopDemo(repositoryRef.current, new Date().toISOString());
-        setWorkItems(await repositoryRef.current.listWorkItems());
+        const frames = await (visualScenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
+        const latest = await repositoryRef.current.listWorkItems();
+        setWorkItems(latest);
+        const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repositoryRef.current!.getApproval(item.currentApprovalId)] : []));
+        setApprovalStates(Object.fromEntries(approvals.filter(approval => approval !== null).map(approval => [approval.workItemId, approval])));
         setActivityFrames(frames); setActivityIndex(0); setActivityError(null); setFloorView("all");
         return { ok: true };
       } catch { setActivityError("デモを開始できませんでした。再読み込みしてください。"); return { ok: false, message: "デモを開始できませんでした" }; }
@@ -478,7 +482,7 @@ export default function ClaudeOfficeV3() {
       ) : null}
 
       {bootstrapError ? <p role="alert">WorkItemを読み込めませんでした。再読み込みしてください。</p> : targetMessage ? <p role="status">{targetMessage}</p> : null}
-      <HumanLoopDemoPanel item={visualDemoItem} approval={visualDemoItem ? approvalStates[visualDemoItem.id] : undefined} frame={activityFrame} playing={activityPlaying} busy={humanCommandBusy || !bootstrapReady || demoBusy} error={activityError} frames={activityFrames} names={agentNames} onStart={() => void startActivityDemo()} onReplay={() => setActivityIndex(0)} onOpen={() => { if (!visualDemoItem || humanCommandBusy) return; setFloorView("all"); setFocusedWorkItemId(visualDemoItem.id); setSelectedId(visualDemoItem.assignedAgentId ?? visualDemoItem.execution.lastAgentId); }} />
+      <HumanLoopDemoPanel scenarioId={visualScenarioId} onScenarioChange={id => { setVisualScenarioId(id); setActivityFrames([]); setActivityIndex(0); setActivityError(null); }} item={visualDemoItem} approval={visualDemoItem ? approvalStates[visualDemoItem.id] : undefined} frame={activityFrame} playing={activityPlaying} busy={humanCommandBusy || !bootstrapReady || demoBusy} error={activityError} frames={activityFrames} names={agentNames} onStart={() => void startActivityDemo()} onReplay={() => setActivityIndex(0)} onOpen={() => { if (!visualDemoItem || humanCommandBusy) return; setFloorView("all"); setFocusedWorkItemId(visualDemoItem.id); setSelectedId(visualDemoItem.assignedAgentId ?? visualDemoItem.execution.lastAgentId); }} />
       <main className={`${s.stage} ${floorView === "building" ? s.stageBuilding : ""}`}>
         {floorView === "building" ? (
           <>

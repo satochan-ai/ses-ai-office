@@ -1,11 +1,59 @@
 import { describe, it, expect } from "vitest";
 import { createInMemoryWorkItemRepository } from "@/lib/repositories/inMemoryWorkItemRepository";
-import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID } from "./visualOfficeHumanLoopDemo";
+import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, startVisualNewClientDemo, VISUAL_NEW_CLIENT_ID, VISUAL_DEMO_SCENARIOS } from "./visualOfficeHumanLoopDemo";
 import { executeWorkItemCommandUseCase } from "./executeWorkItemCommand";
 import { projectAgentActivity, nextPresentationIndex } from "@/lib/visual-office/agentActivity";
 import { createSessionStorageWorkItemRepository } from "@/lib/repositories/sessionStorageWorkItemRepository";
 import { approvalSnapshotForWorkItem } from "./prepareWorkItemApproval";
 const at = "2026-10-01T00:00:00.000Z";
+describe("新規顧客文案Demo", () => {
+  it("2シナリオだけを選択対象にし、案件マッチングを先頭にする", () => {
+    expect(VISUAL_DEMO_SCENARIOS.map(scenario => scenario.id)).toEqual(["matching", "outreach"]);
+    expect(new Set(VISUAL_DEMO_SCENARIOS.map(scenario => scenario.workItemId)).size).toBe(2);
+  });
+  it("既存案件Demoに干渉せず文案をprepare-onlyで準備し、重複しない", async () => {
+    const repo = createInMemoryWorkItemRepository();
+    await startVisualHumanLoopDemo(repo, at);
+    const matching = await repo.getWorkItem(VISUAL_HUMAN_LOOP_ID);
+    const frames = await startVisualNewClientDemo(repo, at);
+    expect(frames.map(frame => frame.activity)).toEqual(["working", "handoff", "reviewing", "working", "waiting_human"]);
+    expect(frames[0]).toMatchObject({ agentId: "newbiz", text: "アプローチ候補企業を整理中…" });
+    expect(frames[1].handoff).toEqual({ from: "newbiz", to: "relation" });
+    const item = (await repo.getWorkItem(VISUAL_NEW_CLIENT_ID))!;
+    expect(item).toMatchObject({ kind: "new-client-outreach", assignedAgentId: "relation", missingInfo: [], proposalDecisions: [], status: "awaiting_approval" });
+    expect(await repo.getApproval(item.currentApprovalId!)).toMatchObject({ state: "pending", scope: { permits: ["prepare-only"] } });
+    expect(await startVisualNewClientDemo(repo, at)).toEqual([]);
+    expect(await repo.listWorkItems()).toHaveLength(2);
+    expect(await repo.getWorkItem(VISUAL_HUMAN_LOOP_ID)).toEqual(matching);
+  });
+  it.each(["approve-work-item", "reject-work-item", "return-for-rework"] as const)("%sを保存しreload・再開始でも巻き戻さない", async type => {
+    const values = new Map<string, string>();
+    const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); } };
+    const repo = createSessionStorageWorkItemRepository(storage);
+    await startVisualNewClientDemo(repo, at);
+    const item = (await repo.getWorkItem(VISUAL_NEW_CLIENT_ID))!;
+    const approvalId = item.currentApprovalId!;
+    const result = await executeWorkItemCommandUseCase({ repositories: repo, command: { type, commandId: "decision", workItemId: item.id, approvalId, actorId: "demo-human", issuedAt: at, reason: "文案を修正してください" }, approvalSnapshots: { [approvalId]: approvalSnapshotForWorkItem(item) }, effectContext: { at, actor: { type: "human", id: "demo-human" } } });
+    expect(result.ok).toBe(true);
+    const reopened = createSessionStorageWorkItemRepository(storage);
+    const saved = (await reopened.getWorkItem(item.id))!;
+    const approval = (await reopened.getApproval(approvalId))!;
+    expect(saved.status).toBe(type === "approve-work-item" ? "preparation_recorded" : "returned_for_rework");
+    expect(projectAgentActivity(saved, approval)).toMatchObject(type === "approve-work-item" ? { activity: "completed", text: "Human文案確認完了（未送信）" } : { activity: "working", text: "文案の修正が必要です" });
+    expect(await startVisualNewClientDemo(reopened, at)).toEqual([]);
+    expect(await reopened.getWorkItem(item.id)).toEqual(saved);
+    expect(await reopened.listWorkItems()).toHaveLength(1);
+    expect(saved.execution.lastAgentId).toBe("relation");
+  });
+  it("real WorkItemを上書きしない", async () => {
+    const repo = createInMemoryWorkItemRepository();
+    await startVisualNewClientDemo(repo, at);
+    const item = (await repo.getWorkItem(VISUAL_NEW_CLIENT_ID))!;
+    await repo.saveWorkItem({ ...item, mode: "real" });
+    await expect(startVisualNewClientDemo(repo, at)).rejects.toThrow("demo-only");
+    expect((await repo.getWorkItem(item.id))?.mode).toBe("real");
+  });
+});
 describe("Visual Office Human質問デモ", () => {
   it("案件整理から引き継ぎ、回答、再開、提案担当、pendingまで既存経路で進む", async () => {
     const repository = createInMemoryWorkItemRepository();

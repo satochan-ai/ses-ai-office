@@ -145,6 +145,7 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
                   ) : null}
                   {approvalStates?.[item.id] ? (
                     <div className={s.approvalSection}>
+                      {item.id === "wi-demo-visual-new-client" ? <p>未送信文案の内容確認です。送信許可ではありません。承認しない場合は文案の修正・再作業になります。</p> : null}
                       {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : approvalStates[item.id].state === "pending" ? <><span>人間確認が必要です</span><button type="button" disabled={busy} onClick={async () => { if (busy) return; setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : <span>承認待ちに戻る必要があります</span>}
                     </div>
                   ) : null}

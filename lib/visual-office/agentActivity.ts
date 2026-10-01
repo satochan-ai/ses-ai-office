@@ -2,7 +2,7 @@ import type { WorkItem } from "@/types/workItem";
 import type { Approval } from "@/types/approval";
 export type AgentActivity = "idle" | "working" | "handoff" | "waiting_human" | "reviewing" | "completed";
 export type ActivityFrame = { agentId: string | null; activity: AgentActivity; text: string; handoff?: { from: string; to: string } };
-export function projectAgentActivity(item: WorkItem | undefined, approval?: Approval): ActivityFrame {
+function projectBaseActivity(item: WorkItem | undefined, approval?: Approval): ActivityFrame {
   if (!item) return { agentId: null, activity: "idle", text: "デモを開始すると仕事の流れを確認できます" };
   const agentId = item.assignedAgentId ?? item.execution.lastAgentId;
   if (["closed", "cancelled", "superseded"].includes(item.status) || approval?.state === "approved") return { agentId, activity: "completed", text: approval?.state === "approved" ? "Human確認完了（外部送信なし）" : "工程完了" };
@@ -11,6 +11,15 @@ export function projectAgentActivity(item: WorkItem | undefined, approval?: Appr
   if (item.status === "returned_for_rework") return { agentId, activity: "working", text: "修正依頼を確認中…" };
   const text = item.status === "structuring" ? "案件条件を整理中…" : ["candidate_search", "condition_match"].includes(item.status) ? "候補者を比較中…" : item.status === "info_gap_check" ? "提案可否を再判定中…" : "提案内容を確認中…";
   return { agentId, activity: ["draft_generation", "quality_check"].includes(item.status) ? "reviewing" : "working", text };
+}
+export function projectAgentActivity(item: WorkItem | undefined, approval?: Approval): ActivityFrame {
+  const frame = projectBaseActivity(item, approval);
+  if (item?.kind !== "new-client-outreach") return frame;
+  const text = frame.activity === "completed" ? "Human文案確認完了（未送信）"
+    : item.status === "returned_for_rework" ? "文案の修正が必要です"
+    : frame.activity === "waiting_human" ? "文案準備完了・Human確認待ち（送信許可ではありません）"
+    : item.assignedAgentId === "newbiz" ? "アプローチ候補企業を整理中…" : "接点と文案を確認中…";
+  return { ...frame, text };
 }
 export function projectHandoff(before: WorkItem, after: WorkItem): ActivityFrame | null {
   const from = before.assignedAgentId, to = after.assignedAgentId;

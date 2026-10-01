@@ -1645,4 +1645,6 @@
 .humanLoopActivity b { padding: 3px 8px; background: #e0ebf8; border-radius: 6px; }
 .humanLoopQuestion { padding: 10px; border-left: 3px solid #98651f; background: #fff5df; margin-top: 8px; }
 .humanLoopHandoff { font-weight: 700; }
+.humanLoopDemo select { max-width: 100%; padding: 8px; color: #25364b; background: white; border: 1px solid #748ca6; border-radius: 6px; }
+.humanLoopDemo select:focus-visible { outline: 3px solid #2b67af; outline-offset: 2px; }
 @media (max-width: 600px) { .humanLoopDemo { padding: 12px; } .humanLoopActivity span { flex-basis: 100%; } }
