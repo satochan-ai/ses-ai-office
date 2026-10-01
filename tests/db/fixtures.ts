@@ -1,0 +1,14 @@
+import { demoResultsToWorkItems } from "@/lib/runtime/demoAdapter";
+import { QA_SEED_RESULT } from "@/lib/runtime/demoQaSeed";
+import { createApproval } from "@/lib/workItem/approval";
+import { workItemRevision } from "@/lib/server/persistence/workItemRevision";
+import type { Evidence } from "@/types/workItem";
+import type { CompletedRecord, ProcessingRecord, WorkItemAuditRecord } from "@/types/serverWorkItemPersistence";
+export const at = "2026-10-01T00:00:00.000Z";
+export const expires = "2026-10-03T00:00:00.000Z";
+export const work = () => demoResultsToWorkItems([QA_SEED_RESULT], { now: at, createWorkItemId: () => "w" })[0];
+export const approval = (id = "approval", workItemId = "w") => ({ ...createApproval({ id, workItemId, targetDeliverableId: "deliverable", targetDeliverableVersion: 1, targetDeliverableHash: "hash", targetDecisionSnapshotHash: "decision", requestedBy: { type: "human", id: "human" }, requestedAt: at, scope: { fields: [], permits: ["prepare-only"], conditions: [] }, expiresAt: expires, supersedesApprovalId: null }), approver: { type: "human" as const, id: "human" } });
+export const evidence = (): Evidence => ({ id: "evidence", workItemId: "w", kind: "human_confirmation", claim: "demo confirmed", sourceRef: "demo", sourceVersion: "1", excerpt: "synthetic fixture only", producedBy: { type: "human", id: "human" }, producedAt: at, observedAt: at, verifiedAt: at, validUntil: null });
+export const pending = (): ProcessingRecord => ({ tenantId: "a", actorId: "human", idempotencyKey: "key", commandId: "command", fingerprint: "opaque", status: "processing", createdAt: at, completedAt: null, expiresAt: expires, result: null });
+export const completed = (): CompletedRecord => ({ ...pending(), status: "succeeded", completedAt: at, result: { commandId: "command", workItemId: "w", outcome: "succeeded" } });
+export const audit = (): WorkItemAuditRecord => ({ tenantId: "a", auditId: "audit", commandId: "command", requestId: "request", idempotencyKey: "key", workItemId: "w", actor: { type: "human", id: "human" }, commandType: "approve-work-item", receivedAt: at, completedAt: at, outcome: "succeeded", reasonReference: null, beforeRevision: workItemRevision(1), afterRevision: workItemRevision(2), safeErrorCode: null });
