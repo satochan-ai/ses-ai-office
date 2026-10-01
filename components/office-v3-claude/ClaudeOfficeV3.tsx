@@ -32,7 +32,8 @@ import HumanSeatPanel from "./HumanSeatPanel";
 import OfficeScene from "./OfficeScene";
 import HumanLoopDemoPanel from "./HumanLoopDemoPanel";
 import { startVisualHumanLoopDemo, resumeVisualHumanLoopDemo, VISUAL_HUMAN_LOOP_ID, VISUAL_DEMO_SCENARIOS, startVisualNewClientDemo, startVisualBpDemo, startVisualCandidateDemo, resumeVisualCandidateDemo, VISUAL_CANDIDATE_ID } from "@/lib/application/visualOfficeHumanLoopDemo";
-import { nextPresentationIndex, projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
+import { projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
+import { MAIN_SHOWCASE_SCENARIO, schedulePresentationFrame, showcaseReplayFrames } from "@/lib/visual-office/showcaseGuide";
 import s from "./OfficeV3.module.css";
 
 /**
@@ -71,14 +72,14 @@ export default function ClaudeOfficeV3() {
   const [visualScenarioId, setVisualScenarioId] = useState("matching");
   const [activityFrames, setActivityFrames] = useState<ActivityFrame[]>([]);
   const [activityIndex, setActivityIndex] = useState(0);
+  const [showcaseMode, setShowcaseMode] = useState<"off" | "intro" | "active">("off");
+  const [presentationPaused, setPresentationPaused] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
   const activityPlaying = activityFrames.length > 0 && activityIndex < activityFrames.length - 1;
   const activityFrame = activityFrames[activityIndex];
-  useEffect(() => {
-    if (!activityPlaying) return;
-    const timer = setTimeout(() => setActivityIndex(index => nextPresentationIndex(index, activityFrames.length)), 1200);
-    return () => clearTimeout(timer);
-  }, [activityIndex, activityFrames.length, activityPlaying]);
+  useEffect(() => schedulePresentationFrame(activityIndex, activityFrames.length,
+    showcaseMode === "active" && presentationPaused, setActivityIndex),
+  [activityIndex, activityFrames.length, showcaseMode, presentationPaused]);
 
   const runHumanCommand = useCallback(async (action: Parameters<ReturnType<typeof createHumanCommandGuard>["run"]>[0]) => {
     const guard = humanCommandGuardRef.current;
@@ -237,16 +238,21 @@ export default function ClaudeOfficeV3() {
 
   const visualDemoItem = workItems.find(item => item.id === VISUAL_DEMO_SCENARIOS.find(scenario => scenario.id === visualScenarioId)?.workItemId);
   const liveDemoActivity = projectAgentActivity(visualDemoItem, visualDemoItem ? approvalStates[visualDemoItem.id] : undefined);
-  const startActivityDemo = async () => {
-    await runHumanCommand(async () => {
+  const startActivityDemo = async (scenarioId = visualScenarioId, guided = false) => {
+    return runHumanCommand(async () => {
       if (!repositoryRef.current) return { ok: false, message: "保存先を準備中です" };
       try {
-        const frames = await (visualScenarioId === "candidate" ? startVisualCandidateDemo : visualScenarioId === "bp" ? startVisualBpDemo : visualScenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
+        const frames = await (scenarioId === "candidate" ? startVisualCandidateDemo : scenarioId === "bp" ? startVisualBpDemo : scenarioId === "outreach" ? startVisualNewClientDemo : startVisualHumanLoopDemo)(repositoryRef.current, new Date().toISOString());
         const latest = await repositoryRef.current.listWorkItems();
         setWorkItems(latest);
         const approvals = await Promise.all(latest.flatMap(item => item.currentApprovalId ? [repositoryRef.current!.getApproval(item.currentApprovalId)] : []));
         setApprovalStates(Object.fromEntries(approvals.filter(approval => approval !== null).map(approval => [approval.workItemId, approval])));
-        setActivityFrames(frames); setActivityIndex(0); setActivityError(null); setFloorView("all");
+        setActivityFrames(guided ? showcaseReplayFrames(frames, activityFrames, visualScenarioId) : frames);
+        setActivityIndex(0); setActivityError(null); setFloorView("all");
+        if (guided) {
+          setVisualScenarioId(MAIN_SHOWCASE_SCENARIO); setShowcaseMode("active"); setPresentationPaused(false);
+          setSelectedId(null); setFocusedWorkItemId(null); setTargetMessage(null);
+        }
         return { ok: true };
       } catch { setActivityError("デモを開始できませんでした。再読み込みしてください。"); return { ok: false, message: "デモを開始できませんでした" }; }
     });
@@ -483,7 +489,13 @@ export default function ClaudeOfficeV3() {
       ) : null}
 
       {bootstrapError ? <p role="alert">WorkItemを読み込めませんでした。再読み込みしてください。</p> : targetMessage ? <p role="status">{targetMessage}</p> : null}
-      <HumanLoopDemoPanel scenarioId={visualScenarioId} onScenarioChange={id => { setVisualScenarioId(id); setActivityFrames([]); setActivityIndex(0); setActivityError(null); }} item={visualDemoItem} approval={visualDemoItem ? approvalStates[visualDemoItem.id] : undefined} frame={activityFrame} playing={activityPlaying} busy={humanCommandBusy || !bootstrapReady || demoBusy} error={activityError} frames={activityFrames} names={agentNames} onStart={() => void startActivityDemo()} onReplay={() => setActivityIndex(0)} onOpen={() => { if (!visualDemoItem || humanCommandBusy) return; setFloorView("all"); setFocusedWorkItemId(visualDemoItem.id); setSelectedId(visualDemoItem.assignedAgentId ?? visualDemoItem.execution.lastAgentId); }} />
+      <HumanLoopDemoPanel
+        showcaseMode={showcaseMode} paused={presentationPaused}
+        onIntro={() => setShowcaseMode("intro")}
+        onGuideStart={() => void startActivityDemo(MAIN_SHOWCASE_SCENARIO, true)}
+        onGuideExit={() => { setShowcaseMode("off"); setPresentationPaused(false); }}
+        onPause={() => setPresentationPaused(value => !value)}
+        scenarioId={visualScenarioId} onScenarioChange={id => { setShowcaseMode("off"); setPresentationPaused(false); setVisualScenarioId(id); setActivityFrames([]); setActivityIndex(0); setActivityError(null); }} item={visualDemoItem} approval={visualDemoItem ? approvalStates[visualDemoItem.id] : undefined} frame={activityFrame} playing={activityPlaying} busy={humanCommandBusy || !bootstrapReady || demoBusy} error={activityError} frames={activityFrames} names={agentNames} onStart={() => void startActivityDemo()} onReplay={() => setActivityIndex(0)} onOpen={() => { if (!visualDemoItem || humanCommandBusy) return; setFloorView("all"); setFocusedWorkItemId(visualDemoItem.id); setSelectedId(visualDemoItem.assignedAgentId ?? visualDemoItem.execution.lastAgentId); }} />
       <main className={`${s.stage} ${floorView === "building" ? s.stageBuilding : ""}`}>
         {floorView === "building" ? (
           <>

@@ -1648,3 +1648,13 @@
 .humanLoopDemo select { max-width: 100%; padding: 8px; color: #25364b; background: white; border: 1px solid #748ca6; border-radius: 6px; }
 .humanLoopDemo select:focus-visible { outline: 3px solid #2b67af; outline-offset: 2px; }
 @media (max-width: 600px) { .humanLoopDemo { padding: 12px; } .humanLoopActivity span { flex-basis: 100%; } }
+
+/* ガイドは既存パネル内の説明だけ。演出や業務状態は増やさない。 */
+.showcaseGuide { margin: 12px 0; padding: 12px; border: 2px solid #467599; border-radius: 10px; background: #eef6fc; }
+.showcaseActions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.showcaseActions button { white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.showcaseSummary { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+@media (max-width: 600px) {
+  .showcaseSummary { grid-template-columns: 1fr; }
+  .showcaseActions { flex-direction: column; align-items: stretch; }
+}

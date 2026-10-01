@@ -4,13 +4,21 @@ import type { Approval } from "@/types/approval";
 import { projectAgentActivity, type ActivityFrame } from "@/lib/visual-office/agentActivity";
 import s from "./OfficeV3.module.css";
 import { NEW_CLIENT_DRAFT, BP_PREPARATION_MEMO, CANDIDATE_MEMO, VISUAL_DEMO_SCENARIOS } from "@/lib/application/visualOfficeHumanLoopDemo";
+import ShowcaseGuide from "./ShowcaseGuide";
+import { projectShowcaseStep } from "@/lib/visual-office/showcaseGuide";
 const LABELS = { idle: "待機", working: "作業中", handoff: "引き継ぎ", waiting_human: "Human待ち", reviewing: "確認中", completed: "完了" };
-export default function HumanLoopDemoPanel({ scenarioId, onScenarioChange, item, approval, frame, playing, busy, error, frames, names, onStart, onOpen, onReplay }: { scenarioId: string; onScenarioChange: (id: string) => void; item?: WorkItem; approval?: Approval; frame?: ActivityFrame; playing: boolean; busy: boolean; error: string | null; frames: ActivityFrame[]; names: Record<string, string>; onStart: () => void; onOpen: () => void; onReplay: () => void }) {
+export default function HumanLoopDemoPanel({ showcaseMode, paused, onIntro, onGuideStart, onGuideExit, onPause, scenarioId, onScenarioChange, item, approval, frame, playing, busy, error, frames, names, onStart, onOpen, onReplay }: { showcaseMode: "off" | "intro" | "active"; paused: boolean; onIntro: () => void; onGuideStart: () => void; onGuideExit: () => void; onPause: () => void; scenarioId: string; onScenarioChange: (id: string) => void; item?: WorkItem; approval?: Approval; frame?: ActivityFrame; playing: boolean; busy: boolean; error: string | null; frames: ActivityFrame[]; names: Record<string, string>; onStart: () => void; onOpen: () => void; onReplay: () => void }) {
   const live = projectAgentActivity(item, approval), shown = playing && frame ? frame : live;
   const open = item?.missingInfo.filter(info => info.status === "open") ?? [];
   return <section className={s.humanLoopDemo} aria-label="AI引き継ぎ・Human質問デモ">
     <div className={s.humanLoopDemoHeading}><strong>AI業務デモ</strong><small>架空データ・外部送信なし</small></div>
-    <label>業務シナリオ <select value={scenarioId} disabled={busy} onChange={event => onScenarioChange(event.target.value)}>{VISUAL_DEMO_SCENARIOS.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}</select></label>
+    {showcaseMode === "off" ? <button type="button" disabled={busy} onClick={onIntro}>ガイド付きで見る</button> : showcaseMode === "intro" ? <div className={s.showcaseGuide}>
+      <p>AI社員の役割分担と、Humanへの確認の流れを見られます。</p>
+      <p>このデモでは外部送信は行いません。</p>
+      <div className={s.showcaseActions}><button type="button" disabled={busy} onClick={onGuideStart}>ガイドを開始</button><button type="button" onClick={onGuideExit}>通常Demoとして見る</button></div>
+    </div> : <ShowcaseGuide progress={projectShowcaseStep(item, approval, frame, playing, frames[0])} playing={playing} paused={paused} hasHistory={frames.length > 0} onPause={onPause} onExit={onGuideExit} onScenario={onScenarioChange} />}
+    {showcaseMode === "active" ? <p>ガイド中は案件マッチングに固定しています。別の業務を選ぶにはガイドを終了してください。</p> : null}
+    <label>業務シナリオ <select value={scenarioId} disabled={busy || showcaseMode === "active"} onChange={event => onScenarioChange(event.target.value)}>{VISUAL_DEMO_SCENARIOS.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.title}</option>)}</select></label>
     <p>{VISUAL_DEMO_SCENARIOS.find(scenario => scenario.id === scenarioId)?.description}</p>
     <p>{scenarioId === "candidate" ? "候補者整理 → 本人意向をHumanへ確認 → 面談確認メモ → Human確認" : scenarioId === "bp" ? "BP情報整理 → 営業Mgrへ引き継ぎ → 面談準備 → Human確認" : scenarioId === "outreach" ? "企業整理 → 接点確認 → 文案準備 → Human確認" : "案件整理 → 候補者比較 → Human回答 → 提案準備 → Human確認"}</p>
     {!item ? <button type="button" disabled={busy} onClick={onStart}>AI業務デモを開始</button> : <>
