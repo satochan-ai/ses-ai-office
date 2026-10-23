@@ -5,11 +5,12 @@ import { QA_SEED_RESULT } from "@/lib/runtime/demoQaSeed";
 import type { WorkItem } from "@/types/workItem";
 import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
 import type { WorkItemRepository } from "@/types/workItemRepository";
-import { createManualWorkItem, manualWorkItemId } from "./createManualWorkItem";
+import { createManualWorkItem, listManualWorkItemSummaries, manualWorkItemId } from "./createManualWorkItem";
 import { executeWorkItemCommandUseCase } from "./executeWorkItemCommand";
 import { formatSavedDate, getManualWorkItemDetail } from "./getManualWorkItemDetail";
 import { initializeDemoWorkItemsFromResults } from "./initializeDemoWorkItems";
 import { approvalSnapshotForWorkItem, prepareWorkItemApproval } from "./prepareWorkItemApproval";
+import { getManualRevisionDraft, reviseManualWorkItem } from "./reviseManualWorkItem";
 
 class StorageStub {
   values = new Map<string, string>();
@@ -159,5 +160,61 @@ describe("getManualWorkItemDetail", () => {
     const corrupt = new StorageStub(); corrupt.values.set(SESSION_WORK_ITEM_REPOSITORY_KEY, JSON.stringify({ version: 0, items: [] }));
     expect(await getManualWorkItemDetail(createSessionStorageWorkItemRepository(corrupt), id)).toEqual({ ok: false, code: "repository-error" });
     expect(corrupt.values.get(SESSION_WORK_ITEM_REPOSITORY_KEY)).toBe(JSON.stringify({ version: 0, items: [] }));
+  });
+});
+
+describe("manual work item revision in the detail view", () => {
+  const nextKey = "manual-detail-next-01"; const nextId = manualWorkItemId(nextKey);
+  const revisedInput = { ...input, title: "架空 Java保守案件（修正版）", skills: "Java、Spring Boot", startDate: "matched", route: "clear" } as const;
+  const reviseFrom = (repository: WorkItemRepository, submissionKey = nextKey) => reviseManualWorkItem(revisedInput, repository, { sourceWorkItemId: id, submissionKey, now: "2026-10-23T01:10:00.000Z" });
+
+  it.each([["return-for-rework", "returned", "候補者条件を修正"], ["reject-work-item", "rejected", "開示範囲を再確認"]] as const)("offers revision after %s with the reason from its own record", async (type, kind, reason) => {
+    const repository = createInMemoryWorkItemRepository(); await decide(repository, type);
+    expect(await getManualRevisionDraft(repository, id)).toEqual({ ok: true, input: { ...input, skills: "Java、<b>SQL</b>" }, revision: { kind, reason } });
+  });
+
+  it("does not offer revision before rework is needed or after approval", async () => {
+    const fresh = createInMemoryWorkItemRepository(); await created(fresh);
+    expect(await getManualRevisionDraft(fresh, id)).toEqual({ ok: false, code: "invalid-state" });
+    const waiting = createInMemoryWorkItemRepository(); await pending(waiting);
+    expect(await getManualRevisionDraft(waiting, id)).toEqual({ ok: false, code: "invalid-state" });
+    const approved = createInMemoryWorkItemRepository(); await decide(approved, "approve-work-item");
+    expect(await getManualRevisionDraft(approved, id)).toEqual({ ok: false, code: "invalid-state" });
+  });
+
+  it("shows the superseded source and its successor with confirmed links after reload, keeping old records", async () => {
+    const storage = new StorageStub(); const repository = createSessionStorageWorkItemRepository(storage);
+    await decide(repository, "return-for-rework");
+    const sourceBefore = await detailOf(repository);
+    expect(await reviseFrom(repository)).toMatchObject({ ok: true, created: true });
+    const reopened = createSessionStorageWorkItemRepository(storage);
+    const source = await detailOf(reopened);
+    expect(source).toMatchObject({ statusLabel: "修正版へ置換済み", successor: { id: nextId, title: "架空 Java保守案件（修正版）", confirmed: true }, parent: null });
+    expect(source.evidence).toEqual(sourceBefore.evidence);
+    expect(source.approvals).toEqual(sourceBefore.approvals);
+    expect(source.rework).toEqual(sourceBefore.rework);
+    const successor = await getManualWorkItemDetail(reopened, nextId);
+    expect(successor).toMatchObject({ ok: true, detail: { statusLabel: "確認事項への回答待ち", parent: { id, title: "架空 Java保守案件", confirmed: true }, successor: null, approvals: [], missingInfo: [{ label: "情報開示範囲", answered: false }] } });
+    expect(await listManualWorkItemSummaries(reopened, await reopened.listWorkItems())).toEqual([
+      { id: nextId, title: "架空 Java保守案件（修正版）", status: "blocked_missing_info", canOpenInVisualOffice: true },
+      { id, title: "架空 Java保守案件", status: "superseded", canOpenInVisualOffice: false },
+    ]);
+    // 古い詳細表示から再度修正しようとしても、元案件は置換済みとして拒否され何も変わらない。
+    expect(await getManualRevisionDraft(reopened, id)).toEqual({ ok: false, code: "invalid-state" });
+    const snapshot = storage.values.get(SESSION_WORK_ITEM_REPOSITORY_KEY);
+    expect(await reviseFrom(reopened, "manual-detail-next-02")).toMatchObject({ ok: false, code: "already-superseded" });
+    expect(storage.values.get(SESSION_WORK_ITEM_REPOSITORY_KEY)).toBe(snapshot);
+  });
+
+  it("does not name a related item whose back-reference is missing or different", async () => {
+    const repository = createInMemoryWorkItemRepository(); await decide(repository, "reject-work-item"); await reviseFrom(repository);
+    const source = (await repository.getWorkItem(id))!; const successor = (await repository.getWorkItem(nextId))!;
+    const evidence = [...await repository.listEvidenceByWorkItem(id), ...await repository.listEvidenceByWorkItem(nextId)];
+    const mismatched = createInMemoryWorkItemRepository({ workItems: [source, { ...successor, relations: { ...successor.relations, parentWorkItemId: "wi-manual-other" } }], evidence });
+    expect(await detailOf(mismatched)).toMatchObject({ successor: { id: nextId, title: null, confirmed: false } });
+    const missing = createInMemoryWorkItemRepository({ workItems: [source], evidence });
+    expect(await detailOf(missing)).toMatchObject({ statusLabel: "修正版へ置換済み", successor: { id: nextId, title: null, confirmed: false } });
+    const orphan = createInMemoryWorkItemRepository({ workItems: [successor], evidence });
+    expect(await getManualWorkItemDetail(orphan, nextId)).toMatchObject({ ok: true, detail: { parent: { id, title: null, confirmed: false } } });
   });
 });

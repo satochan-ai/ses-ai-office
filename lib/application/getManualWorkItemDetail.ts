@@ -1,7 +1,7 @@
 import type { Approval } from "@/types/approval";
 import type { Evidence, MissingInfo, WorkItem } from "@/types/workItem";
 import type { WorkItemRepository } from "@/types/workItemRepository";
-import { isManualWorkItem, manualEvidenceId } from "./createManualWorkItem";
+import { isManualWorkItem, manualEvidenceId, manualWorkItemTitle } from "./createManualWorkItem";
 
 /**
  * 手入力WorkItemの詳細を、Repositoryに保存済みの事実だけから組み立てる読み取り専用の投影。
@@ -15,7 +15,7 @@ const ANSWER_LABEL: Record<string, Record<string, string>> = {
   personIntent: { confirmed: "提案可", declined: "辞退" },
   duplicateProposal: { none: "重複なし", possible: "重複の可能性", confirmed: "重複あり" },
 };
-const STATUS_LABEL: Partial<Record<WorkItem["status"], string>> = { blocked_missing_info: "確認事項への回答待ち", awaiting_approval: "準備内容の確認待ち", preparation_recorded: "確認済み（準備のみ）", returned_for_rework: "修正が必要" };
+const STATUS_LABEL: Partial<Record<WorkItem["status"], string>> = { blocked_missing_info: "確認事項への回答待ち", awaiting_approval: "準備内容の確認待ち", preparation_recorded: "確認済み（準備のみ）", returned_for_rework: "修正が必要", superseded: "修正版へ置換済み" };
 const APPROVAL_LABEL: Record<Approval["state"], string> = { pending: "確認待ち", approved: "確認済み（準備のみ）", rejected: "承認しない（修正が必要）", invalidated: "無効", on_hold: "保留", expired: "期限切れ", withdrawn: "取り下げ" };
 const INVALIDATION_LABEL: Record<string, string> = { returned_for_rework: "差し戻しにより無効", proposal_decision_changed: "確認内容の変更により無効", deliverable_changed: "準備内容の変更により無効", expired: "期限切れにより無効", cancelled: "取消により無効", superseded: "置換により無効" };
 const INPUT_LABEL = { startDate: { matched: "一致を確認済み", unknown: "未確認" }, route: { clear: "確認済み", unknown: "未確認" } } as const;
@@ -29,7 +29,17 @@ export type ManualWorkItemDetail = {
   missingInfo: ManualMissingInfoView[]; approvals: ManualApprovalView[];
   rework: { reason: string; returnedAt: string } | null;
   evidence: ManualEvidenceView[]; missingEvidenceCount: number;
+  /** 修正版（後継）と元の案件。相手側の関連IDが一致しない・見つからない場合は confirmed=false で名前を出さない。 */
+  successor: RelatedManualWorkItem | null; parent: RelatedManualWorkItem | null;
 };
+export type RelatedManualWorkItem = { id: string; title: string | null; confirmed: boolean };
+
+async function related(repository: WorkItemRepository, id: string | null | undefined, pointsBack: (other: WorkItem) => boolean): Promise<RelatedManualWorkItem | null> {
+  if (typeof id !== "string" || !id) return null;
+  const other = await repository.getWorkItem(id);
+  if (!other || !isManualWorkItem(other) || !pointsBack(other)) return { id, title: null, confirmed: false };
+  return { id, title: manualWorkItemTitle(await repository.getEvidence(manualEvidenceId(id))), confirmed: true };
+}
 export type ManualWorkItemDetailResult =
   | { ok: true; detail: ManualWorkItemDetail }
   | { ok: false; code: "not-found" | "not-manual" | "repository-error" };
@@ -116,6 +126,8 @@ export async function getManualWorkItemDetail(repository: WorkItemRepository, wo
       rework: item.reworkInfo && text(item.reworkInfo.reason) ? { reason: item.reworkInfo.reason, returnedAt: formatSavedDate(item.reworkInfo.returnedAt) } : null,
       evidence: evidence.sort((a, b) => sortTime(a.producedAt) - sortTime(b.producedAt) || a.id.localeCompare(b.id)).map(entry => evidenceView(entry, item, missingInfo)),
       missingEvidenceCount: evidenceIds.filter(id => !evidence.some(entry => entry.id === id)).length,
+      successor: await related(repository, item.relations?.supersededByWorkItemId, other => other.relations?.parentWorkItemId === item.id),
+      parent: await related(repository, item.relations?.parentWorkItemId, other => other.relations?.supersededByWorkItemId === item.id),
     } };
   } catch {
     return { ok: false, code: "repository-error" };
