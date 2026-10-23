@@ -2,6 +2,7 @@ import type { Approval } from "@/types/approval";
 import type { Evidence, MissingInfo, WorkItem } from "@/types/workItem";
 import type { WorkItemRepository } from "@/types/workItemRepository";
 import { isManualWorkItem, manualEvidenceId, manualWorkItemTitle } from "./createManualWorkItem";
+import { projectManualHumanActions, type ManualHumanActions } from "./manualWorkItemHumanActions";
 
 /**
  * 手入力WorkItemの詳細を、Repositoryに保存済みの事実だけから組み立てる読み取り専用の投影。
@@ -27,6 +28,7 @@ export type ManualApprovalView = { id: string; stateLabel: string; requestedAt: 
 export type ManualWorkItemDetail = {
   id: string; title: string | null; inputLines: DetailLine[]; createdAt: string; statusLabel: string;
   missingInfo: ManualMissingInfoView[]; approvals: ManualApprovalView[];
+  humanActions: ManualHumanActions;
   rework: { reason: string; returnedAt: string } | null;
   evidence: ManualEvidenceView[]; missingEvidenceCount: number;
   /** 修正版（後継）と元の案件。相手側の関連IDが一致しない・見つからない場合は confirmed=false で名前を出さない。 */
@@ -114,6 +116,7 @@ export async function getManualWorkItemDetail(repository: WorkItemRepository, wo
       inputLines: lines,
       createdAt: formatSavedDate(item.createdAt),
       statusLabel: statusLabel(item, missingInfo),
+      humanActions: projectManualHumanActions(item, approvals),
       missingInfo: missingInfo.map(info => ({ id: info.id, label: FIELD_LABEL[info.field] ?? info.field, question: info.question, answered: info.status !== "open", answer: info.status === "open" ? null : info.status === "waived" ? "確認不要として扱い" : describeAnswer(info.resolution) ?? "回答内容を読み取れません", answeredAt: info.status === "open" ? null : formatSavedDate(info.resolvedAt) })),
       approvals: approvals.sort((a, b) => sortTime(a.requestedAt) - sortTime(b.requestedAt) || a.id.localeCompare(b.id)).map(approval => ({
         id: approval.id,

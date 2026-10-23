@@ -213,7 +213,8 @@ export default function Dashboard() {
   return <div className="app-shell"><Header onMenu={() => setSidebar(true)} /><Sidebar open={sidebar} onClose={() => setSidebar(false)} /><main>
     <div className="page-intro"><div><p><span className="pulse" />AI営業チームは正常に稼働しています</p><h1>おはようございます、さとちゃんさん</h1><span>今日の判断に必要な情報だけをまとめました。</span></div><button><Search size={16} />企業・案件・要員を検索 <kbd>⌘ K</kbd></button></div>
     {decisionQueueError ? <p role="alert">判断が必要な項目を読み込めませんでした。再読み込みしてください。</p> : decisionQueue ? <DecisionQueuePanel queue={decisionQueue} /> : <p role="status">判断が必要な項目を読み込み中…</p>}
-    {!decisionQueueError && decisionQueue ? <ManualWorkItemForm items={manualItems} onCreated={reloadDecisionData} /> : null}
+    {/* 更新後の一覧読取が失敗しても、詳細内の保存結果・入力内容は消さない。 */}
+    {decisionQueue ? <ManualWorkItemForm items={manualItems} onCreated={reloadDecisionData} /> : null}
     {demoResult && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>{demoResult.scenarioTitle ?? "Java案件の提案準備が完了"}</strong> {demoResult.dashboardSummary ?? "新着案件 +1 ・ 提案候補 +3 ・ 提案中 +1"}</span></div><button onClick={resetDemo}>デモ結果をリセット</button></div>}
     {v3Projections.length > 0 && <div className="demo-dashboard-banner"><div><Check size={17} /><span><strong>V3デモ結果を反映中（モック）</strong></span></div></div>}
     <div className="summary-grid">{displayedSummaries.map((s, i) => <SummaryCard key={s.label} item={s} index={i} />)}</div>

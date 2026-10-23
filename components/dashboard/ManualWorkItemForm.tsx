@@ -21,6 +21,9 @@ export default function ManualWorkItemForm({ items, onCreated }: { items: Manual
   // 登録直後の連続クリックが空フォームの送信になり、成功表示をエラーで上書きしないようにする。
   const justCreated = useRef(false);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [detailBusy, setDetailBusy] = useState(false);
+  const detailBusyRef = useRef(false);
+  const changeDetailBusy = (busy: boolean) => { detailBusyRef.current = busy; setDetailBusy(busy); };
   const detailButtons = useRef<Record<string, HTMLButtonElement | null>>({});
   const closeDetail = (id: string) => { setDetailId(null); detailButtons.current[id]?.focus(); };
   // 新しい順に5件まで表示する。詳細を開いている案件は、修正版の追加で6件目以降になっても表示し続ける。
@@ -30,7 +33,7 @@ export default function ManualWorkItemForm({ items, onCreated }: { items: Manual
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (inFlight.current || justCreated.current) return;
+    if (inFlight.current || justCreated.current || detailBusyRef.current) return;
     inFlight.current = true; setSubmitting(true); setMessage(null);
     try {
       submissionKey.current ??= newSubmissionKey();
@@ -75,9 +78,9 @@ export default function ManualWorkItemForm({ items, onCreated }: { items: Manual
     {message ? <p className="manual-message" role="status">{message}</p> : null}
     {items.length > 0 ? <div className="manual-list"><h3>登録済みの手入力案件（このタブのみ）</h3><ul>{visibleItems.map(item => <li key={item.id}>
       <span>{item.title}</span><em>{STATUS_TEXT[item.status] ?? item.status}</em>
-      <button type="button" ref={element => { detailButtons.current[item.id] = element; }} aria-expanded={detailId === item.id} aria-controls={detailId === item.id ? `manual-detail-${item.id}-region` : undefined} onClick={() => setDetailId(current => current === item.id ? null : item.id)}>{detailId === item.id ? "詳細を閉じる" : "詳細を見る"}</button>
-      {item.canOpenInVisualOffice ? <Link href={buildVisualOfficeWorkItemHref(item.id)}>Visual Officeで確認</Link> : null}
-      {detailId === item.id ? <ManualWorkItemDetail workItemId={item.id} onClose={() => closeDetail(item.id)} onChanged={onCreated} /> : null}
+      <button type="button" disabled={detailBusy} ref={element => { detailButtons.current[item.id] = element; }} aria-expanded={detailId === item.id} aria-controls={detailId === item.id ? `manual-detail-${item.id}-region` : undefined} onClick={() => { if (!detailBusyRef.current) setDetailId(current => current === item.id ? null : item.id); }}>{detailId === item.id ? "詳細を閉じる" : "詳細を見る"}</button>
+      {item.canOpenInVisualOffice ? <Link aria-disabled={detailBusy} onClick={event => { if (detailBusyRef.current) event.preventDefault(); }} href={buildVisualOfficeWorkItemHref(item.id)}>Visual Officeで確認</Link> : null}
+      {detailId === item.id ? <ManualWorkItemDetail workItemId={item.id} onClose={() => { if (!detailBusyRef.current) closeDetail(item.id); }} onChanged={onCreated} onBusyChange={changeDetailBusy} /> : null}
     </li>)}</ul>{items.length > visibleItems.length ? <p>ほか{items.length - visibleItems.length}件</p> : null}</div> : null}
   </section>;
 }

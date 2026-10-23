@@ -5,21 +5,24 @@ import { getManualWorkItemDetail, type ManualWorkItemDetailResult, type RelatedM
 import { getManualRevisionDraft, type ManualRevisionDraft } from "@/lib/application/reviseManualWorkItem";
 import { createWorkItemRepository } from "@/lib/repositories/createWorkItemRepository";
 import ManualWorkItemRevisionForm from "./ManualWorkItemRevisionForm";
+import ManualWorkItemHumanActions from "./ManualWorkItemHumanActions";
 
-const ERROR_TEXT = { "not-found": "この案件はこのタブの一時保存領域に見つかりません。", "not-manual": "手入力した架空案件ではないため、ここでは表示できません。", "repository-error": "保存データを読み込めませんでした。データは変更していません。" } as const;
+const ERROR_TEXT = { "not-found": "この案件はこのタブの一時保存領域に見つかりません。", "not-manual": "手入力した架空案件ではないため、ここでは表示できません。", "repository-error": "保存データを読み込めませんでした。最新の状態の読み直しを試してください。" } as const;
 const REVISION_LABEL = { returned: "修正依頼の理由", rejected: "承認しなかった理由" } as const;
 
 function Related({ label, item }: { label: string; item: RelatedManualWorkItem }) {
   return <p className="manual-detail-related">{label}：{item.confirmed ? <strong>{item.title ?? "（案件名を読み込めません）"}</strong> : <em>関連案件を確認できません</em>}<small>（WorkItem ID {item.id}）</small></p>;
 }
 
-/** 保存済みの状態・確認記録だけを表示する。操作履歴・監査ログではない。開くたび・更新操作のたびに再取得する。 */
-export default function ManualWorkItemDetail({ workItemId, onClose, onChanged }: { workItemId: string; onClose: () => void; onChanged?: () => Promise<void> }) {
+/** 保存済みの状態・確認記録を表示し、手入力案件のHuman確認を接続する。操作履歴・監査ログではない。 */
+export default function ManualWorkItemDetail({ workItemId, onClose, onChanged, onBusyChange }: { workItemId: string; onClose: () => void; onChanged?: () => Promise<void>; onBusyChange: (busy: boolean) => void }) {
   const [result, setResult] = useState<ManualWorkItemDetailResult | null>(null);
   const [draft, setDraft] = useState<ManualRevisionDraft | null>(null);
   const [loading, setLoading] = useState(false);
   const [revising, setRevising] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const changeBusy = (busy: boolean) => { setActionBusy(busy); if (busy) setNotice(null); onBusyChange(busy); };
   const headingRef = useRef<HTMLHeadingElement>(null);
   const reviseButtonRef = useRef<HTMLButtonElement>(null);
   const titleId = `manual-detail-${workItemId}`;
@@ -42,7 +45,8 @@ export default function ManualWorkItemDetail({ workItemId, onClose, onChanged }:
   const revised = async (message: string) => {
     setRevising(false); setNotice(message);
     await load();
-    await onChanged?.();
+    try { await onChanged?.(); }
+    catch { setNotice(`${message}一覧を更新できませんでした。再読み込みしてください。`); }
     headingRef.current?.focus();
   };
 
@@ -50,23 +54,24 @@ export default function ManualWorkItemDetail({ workItemId, onClose, onChanged }:
   return <section className="manual-detail" id={`${titleId}-region`} aria-labelledby={titleId} aria-busy={loading}>
     <div className="manual-detail-head">
       <h4 id={titleId} ref={headingRef} tabIndex={-1}>{detail?.title ?? "手入力案件の詳細"}</h4>
-      <div><button type="button" onClick={() => void load()} disabled={loading || revising}>{loading ? "読み込み中…" : "最新の状態を読み込む"}</button><button type="button" onClick={onClose}>詳細を閉じる</button></div>
+      <div><button type="button" onClick={() => void load()} disabled={loading || revising || actionBusy}>{loading ? "読み込み中…" : "最新の状態を読み込む"}</button><button type="button" onClick={onClose} disabled={actionBusy}>詳細を閉じる</button></div>
     </div>
     <p className="manual-detail-note">このタブに保存済みの状態と確認記録です（操作履歴・監査ログではありません）。架空・匿名データのみを扱います。</p>
     {notice ? <p className="manual-message" role="status">{notice}</p> : null}
     {result && !result.ok ? <p role="alert">{ERROR_TEXT[result.code]}</p> : null}
     {detail ? <>
+      <h5>案件情報</h5>
+      {detail.inputLines.length ? <dl>{detail.inputLines.map(line => <div key={line.label}><dt>{line.label}</dt><dd>{line.value}</dd></div>)}</dl> : <p>登録時の入力記録が見つかりません。</p>}
       <p className="manual-detail-status" role="status">現在の状態：<strong>{detail.statusLabel}</strong></p>
+      {!revising ? <ManualWorkItemHumanActions workItemId={workItemId} actions={detail.humanActions} disabled={loading} onBusyChange={changeBusy} onSaved={revised} /> : null}
       {detail.successor ? <Related label="修正版" item={detail.successor} /> : null}
       {detail.parent ? <Related label="元の案件" item={detail.parent} /> : null}
       {draft?.ok ? <div className="manual-revision">
         <p><strong>{REVISION_LABEL[draft.revision.kind]}：</strong>{draft.revision.reason}</p>
         {revising
           ? <ManualWorkItemRevisionForm sourceWorkItemId={workItemId} initial={draft.input} onRevised={revised} onCancel={() => { focusReviseButton.current = true; setRevising(false); }} />
-          : <button type="button" ref={reviseButtonRef} onClick={() => { setNotice(null); setRevising(true); }} disabled={loading}>修正して再登録</button>}
+          : <button type="button" ref={reviseButtonRef} onClick={() => { setNotice(null); setRevising(true); }} disabled={loading || actionBusy}>修正して再登録</button>}
       </div> : draft && !draft.ok && draft.code === "inconsistent-reason" ? <p className="manual-revision" role="note">差し戻し・却下の記録が確認できないため、修正版を作成できません。</p> : null}
-      <h5>案件情報</h5>
-      {detail.inputLines.length ? <dl>{detail.inputLines.map(line => <div key={line.label}><dt>{line.label}</dt><dd>{line.value}</dd></div>)}</dl> : <p>登録時の入力記録が見つかりません。</p>}
       <dl><div><dt>登録日時</dt><dd>{detail.createdAt}</dd></div><div><dt>WorkItem ID</dt><dd><small>{detail.id}</small></dd></div></dl>
       <h5>Humanへの確認事項</h5>
       {detail.missingInfo.length ? <ul>{detail.missingInfo.map(info => <li key={info.id}><strong>{info.label}</strong>：{info.answered ? <>{info.answer}<small>（回答日時 {info.answeredAt}）</small></> : <em>未回答</em>}<br /><small>{info.question}</small></li>)}</ul> : <p>確認事項の記録はありません。</p>}
