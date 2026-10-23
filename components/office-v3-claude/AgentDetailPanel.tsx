@@ -8,6 +8,7 @@ import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
 import type { Approval } from "@/types/approval";
 import { hasCommandReason } from "@/lib/workItem/projection/agentWorkItemActions";
 import { buildAvailabilityStartResolution } from "@/lib/workItem/ui/missingInfoInput";
+import { MANUAL_WORK_ITEM_ID_PREFIX } from "@/lib/application/createManualWorkItem";
 import s from "./OfficeV3.module.css";
 
 const FIELD_LABEL: Record<string, string> = { proposalRoute: "提案経路", personIntent: "本人意向", availabilityStart: "稼働開始日", duplicateProposal: "重複提案", disclosureScope: "情報開示範囲", informationFreshness: "情報の鮮度" };
@@ -128,7 +129,7 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
               {workload.items.map(item => (
                 <li key={item.id} className={s.workloadItem}>
                   <div className={s.workloadMeta}>
-                    <strong>{item.kindLabel}{item.id === focusedWorkItemId ? <small> 選択中</small> : null}</strong>
+                    <strong>{item.kindLabel}{item.id.startsWith(MANUAL_WORK_ITEM_ID_PREFIX) ? <small> 手入力（架空）</small> : null}{item.id === focusedWorkItemId ? <small> 選択中</small> : null}</strong>
                     <span>{item.statusLabel}</span>
                   </div>
                   <p>{item.nextAction}</p>
@@ -137,7 +138,7 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
                   {item.missingInfo.filter(info => info.status === "open").length > 0 && onResolveMissingInfo ? (
                     <div className={s.missingInfoForm}>
                       <strong>不足情報 {item.missingInfo.filter(info => info.status === "open").length}件</strong>
-                      <p>{view.name}からHumanへ確認：{item.missingInfo.find(info => info.status === "open")?.question}</p>
+                      <p>{item.id.startsWith(MANUAL_WORK_ITEM_ID_PREFIX) ? "手入力内容からHumanへ確認（AI未実行）" : `${view.name}からHumanへ確認`}：{item.missingInfo.find(info => info.status === "open")?.question}</p>
                       <ul>{item.missingInfo.filter(info => info.status === "open").map(info => (
                         <li key={info.id}><button type="button" disabled={busy} onClick={() => { setSelectedMissing({ workItemId: item.id, id: info.id, field: info.field }); setChoice(""); setDate(""); setNote(""); setMessage(null); }}>{FIELD_LABEL[info.field] ?? info.field}</button></li>
                       ))}</ul>
@@ -147,7 +148,8 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
                     <div className={s.approvalSection}>
                       {item.id === "wi-demo-visual-new-client" ? <p>未送信文案の内容確認です。送信許可ではありません。承認しない場合は文案の修正・再作業になります。</p> : null}
                       {item.id === "wi-demo-visual-candidate" ? <p>候補者面談確認メモの内容確認です。採用承認・面談確定・案件提案・外部連絡の許可ではありません。承認しない場合はメモの修正が必要です。</p> : null}
-                      {item.id === "wi-demo-visual-bp-alliance" ? <p>面談準備メモの内容確認です。面談予約・紹介・外部送信の許可ではありません。承認しない場合はメモの修正・再作業になります。</p> : null}
+                      {item.id.startsWith(MANUAL_WORK_ITEM_ID_PREFIX) ? <p>手入力した架空案件の準備内容（不足情報への回答結果）の確認です。提案送信・営業判断・契約の許可ではありません。</p> : null}
+                      {item.id === "wi-demo-visual-bp-alliance" ?<p>面談準備メモの内容確認です。面談予約・紹介・外部送信の許可ではありません。承認しない場合はメモの修正・再作業になります。</p> : null}
                       {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : approvalStates[item.id].state === "pending" ? <><span>人間確認が必要です</span><button type="button" disabled={busy} onClick={async () => { if (busy) return; setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : <span>承認待ちに戻る必要があります</span>}
                     </div>
                   ) : null}
