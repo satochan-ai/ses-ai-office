@@ -6,10 +6,11 @@ import { createManualWorkItem, MANUAL_INPUT_LIMITS, type ManualInputError, type 
 import { createWorkItemRepository } from "@/lib/repositories/createWorkItemRepository";
 import { buildVisualOfficeWorkItemHref } from "@/lib/workItem/ui/visualOfficeTarget";
 import type { WorkItemStatus } from "@/types/workItem";
+import ManualWorkItemDetail from "./ManualWorkItemDetail";
 
 const FIELD_LABEL: Record<ManualInputField, string> = { title: "架空案件名", candidateLabel: "架空候補者の呼称", skills: "必須スキル", startDate: "開始時期の一致", route: "商流（提案経路）" };
 const ERROR_TEXT: Record<ManualInputError["code"], string> = { required: "入力してください", "too-long": "文字数が上限を超えています", invalid: "入力内容を確認してください（改行・制御文字は使えません）" };
-const STATUS_TEXT: Partial<Record<WorkItemStatus, string>> = { blocked_missing_info: "不足情報の回答待ち", awaiting_approval: "準備内容の確認待ち", preparation_recorded: "確認済み（準備のみ）", returned_for_rework: "差し戻し", approval_invalidated: "再確認待ち" };
+const STATUS_TEXT: Partial<Record<WorkItemStatus, string>> = { blocked_missing_info: "確認事項への回答待ち", awaiting_approval: "準備内容の確認待ち", preparation_recorded: "確認済み（準備のみ）", returned_for_rework: "修正が必要", approval_invalidated: "再確認待ち" };
 const initial = { title: "", candidateLabel: "", skills: "", startDate: "unknown", route: "unknown" };
 
 function newSubmissionKey(): string {
@@ -27,6 +28,9 @@ export default function ManualWorkItemForm({ items, onCreated }: { items: Manual
   const inFlight = useRef(false);
   // 登録直後の連続クリックが空フォームの送信になり、成功表示をエラーで上書きしないようにする。
   const justCreated = useRef(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detailButtons = useRef<Record<string, HTMLButtonElement | null>>({});
+  const closeDetail = (id: string) => { setDetailId(null); detailButtons.current[id]?.focus(); };
   const errorFor = (field: ManualInputField) => errors.find(error => error.field === field);
   const set = (field: keyof typeof initial) => (event: { target: { value: string } }) => { justCreated.current = false; setValues(current => ({ ...current, [field]: event.target.value })); };
 
@@ -75,6 +79,11 @@ export default function ManualWorkItemForm({ items, onCreated }: { items: Manual
       <div className="manual-actions"><button type="submit" disabled={submitting}>{submitting ? "登録中…" : "架空案件を登録"}</button><span>開始時期の不一致・商流の矛盾がある案件は対象外です。情報開示範囲は登録後に必ずHumanへ確認します。</span></div>
     </form>
     {message ? <p className="manual-message" role="status">{message}</p> : null}
-    {items.length > 0 ? <div className="manual-list"><h3>登録済みの手入力案件（このタブのみ）</h3><ul>{items.slice(0, 5).map(item => <li key={item.id}><span>{item.title}</span><em>{STATUS_TEXT[item.status] ?? item.status}</em>{item.canOpenInVisualOffice ? <Link href={buildVisualOfficeWorkItemHref(item.id)}>Visual Officeで確認</Link> : null}</li>)}</ul>{items.length > 5 ? <p>ほか{items.length - 5}件</p> : null}</div> : null}
+    {items.length > 0 ? <div className="manual-list"><h3>登録済みの手入力案件（このタブのみ）</h3><ul>{items.slice(0, 5).map(item => <li key={item.id}>
+      <span>{item.title}</span><em>{STATUS_TEXT[item.status] ?? item.status}</em>
+      <button type="button" ref={element => { detailButtons.current[item.id] = element; }} aria-expanded={detailId === item.id} aria-controls={detailId === item.id ? `manual-detail-${item.id}-region` : undefined} onClick={() => setDetailId(current => current === item.id ? null : item.id)}>{detailId === item.id ? "詳細を閉じる" : "詳細を見る"}</button>
+      {item.canOpenInVisualOffice ? <Link href={buildVisualOfficeWorkItemHref(item.id)}>Visual Officeで確認</Link> : null}
+      {detailId === item.id ? <ManualWorkItemDetail workItemId={item.id} onClose={() => closeDetail(item.id)} /> : null}
+    </li>)}</ul>{items.length > 5 ? <p>ほか{items.length - 5}件</p> : null}</div> : null}
   </section>;
 }

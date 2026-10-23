@@ -47,10 +47,10 @@ export function validateManualWorkItemInput(input: unknown): { ok: true; value: 
   return { ok: true, value: { title, candidateLabel, skills, startDate: record.startDate as ManualWorkItemInput["startDate"], route: record.route as ManualWorkItemInput["route"] } };
 }
 
-export const isManualWorkItem = (item: Pick<WorkItem, "id" | "source" | "mode">): boolean =>
-  item.id.startsWith(MANUAL_WORK_ITEM_ID_PREFIX) && item.source.type === "manual" && item.mode === "demo";
+export const isManualWorkItem = (item: Pick<WorkItem, "id" | "source" | "mode" | "kind">): boolean =>
+  item.id.startsWith(MANUAL_WORK_ITEM_ID_PREFIX) && item.source?.type === "manual" && item.mode === "demo" && item.kind === "matching-proposal";
 export const manualWorkItemId = (submissionKey: string) => `${MANUAL_WORK_ITEM_ID_PREFIX}${submissionKey}`;
-const manualEvidenceId = (workItemId: string) => `evidence:manual-input:${workItemId}`;
+export const manualEvidenceId = (workItemId: string) => `evidence:manual-input:${workItemId}`;
 
 /** 入力内容の記録（source_excerpt）から案件名を読む。手入力以外・壊れた値はnull。 */
 export function manualWorkItemTitle(evidence: Evidence | null): string | null {
