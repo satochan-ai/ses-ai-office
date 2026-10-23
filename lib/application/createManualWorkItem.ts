@@ -62,7 +62,7 @@ export function manualWorkItemTitle(evidence: Evidence | null): string | null {
 }
 
 /** 入力値から決まる不足情報だけを作る。開示範囲はフォームで扱わず、Domain上 defined が必須のため常にHumanへ確認する。 */
-export function buildManualWorkItem(input: NormalizedManualInput, submissionKey: string, now: string): { workItem: WorkItem; evidence: Evidence } {
+export function buildManualWorkItem(input: NormalizedManualInput, submissionKey: string, now: string, options: { parentWorkItemId?: string | null } = {}): { workItem: WorkItem; evidence: Evidence } {
   const id = manualWorkItemId(submissionKey);
   const opportunityId = `manual-opportunity:${submissionKey}`;
   const personId = `manual-person:${submissionKey}`;
@@ -79,7 +79,7 @@ export function buildManualWorkItem(input: NormalizedManualInput, submissionKey:
   const workItem: WorkItem = {
     id, kind: "matching-proposal", source: { type: "manual", ref: sourceRef }, sourceVersion, createdAt: now, updatedAt: now,
     assignedAgentId: MANUAL_AGENT_ID, assignedHumanId: MANUAL_HUMAN_ID,
-    relations: { opportunityIds: [opportunityId], personIds: [personId], partnerIds: [], clientIds: [], companyIds: [], parentWorkItemId: null, supersededByWorkItemId: null },
+    relations: { opportunityIds: [opportunityId], personIds: [personId], partnerIds: [], clientIds: [], companyIds: [], parentWorkItemId: options.parentWorkItemId ?? null, supersededByWorkItemId: null },
     // 不足情報への回答待ち。AIの工程は実行していないため実行履歴・復帰先は持たない。
     status: "blocked_missing_info", nextAction: { kind: "provide_human_input", ownerType: "human" }, dueAt: null,
     missingInfo, conflicts: [], evidenceIds: [evidence.id], proposalDecisions: [decision],
