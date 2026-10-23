@@ -6,6 +6,15 @@ export function canRejectWorkItem(workItem: WorkItem, approval: Approval | null)
   return approval !== null && approval.state === "pending" && workItem.currentApprovalId === approval.id && approval.workItemId === workItem.id;
 }
 
+/**
+ * 詳細パネルで「承認する／承認しない／修正を依頼」を出してよいか。承認待ちのWorkItemが、保存済みの同じIDの
+ * pending Approvalを現在の確認対象として持つ場合だけ。承認済み・却下・差し戻し・置換済み・不整合では出さない。
+ */
+export function canShowApprovalDecisions(workItem: Pick<WorkItem, "id" | "status" | "currentApprovalId">, approval: Approval | null | undefined): boolean {
+  return workItem.status === "awaiting_approval" && workItem.currentApprovalId !== null && approval != null
+    && approval.id === workItem.currentApprovalId && approval.workItemId === workItem.id && approval.state === "pending";
+}
+
 export function canReturnForRework(workItem: WorkItem): boolean {
   const actorId = workItem.assignedHumanId ?? "demo-human";
   return transition(workItem, { type: "human-returned-for-rework", at: workItem.updatedAt, humanId: actorId, reason: "boundary-test" }).ok;

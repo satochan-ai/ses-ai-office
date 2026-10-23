@@ -6,7 +6,7 @@ import type { V3AgentView } from "@/types/officeV3Claude";
 import type { AgentWorkload } from "@/lib/workItem/projection/agentWorkload";
 import type { MissingInfoResolutionValue } from "@/types/workItemResolution";
 import type { Approval } from "@/types/approval";
-import { hasCommandReason } from "@/lib/workItem/projection/agentWorkItemActions";
+import { canShowApprovalDecisions, hasCommandReason } from "@/lib/workItem/projection/agentWorkItemActions";
 import { buildAvailabilityStartResolution } from "@/lib/workItem/ui/missingInfoInput";
 import { MANUAL_WORK_ITEM_ID_PREFIX } from "@/lib/application/createManualWorkItem";
 import s from "./OfficeV3.module.css";
@@ -150,10 +150,10 @@ export default function AgentDetailPanel({ view, onClose, focusedWorkItemId, wor
                       {item.id === "wi-demo-visual-candidate" ? <p>候補者面談確認メモの内容確認です。採用承認・面談確定・案件提案・外部連絡の許可ではありません。承認しない場合はメモの修正が必要です。</p> : null}
                       {item.id.startsWith(MANUAL_WORK_ITEM_ID_PREFIX) ? <p>手入力した架空案件の準備内容（不足情報への回答結果）の確認です。提案送信・営業判断・契約の許可ではありません。</p> : null}
                       {item.id === "wi-demo-visual-bp-alliance" ?<p>面談準備メモの内容確認です。面談予約・紹介・外部送信の許可ではありません。承認しない場合はメモの修正・再作業になります。</p> : null}
-                      {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : approvalStates[item.id].state === "pending" ? <><span>人間確認が必要です</span><button type="button" disabled={busy} onClick={async () => { if (busy) return; setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : <span>承認待ちに戻る必要があります</span>}
+                      {approvalStates[item.id].state === "approved" ? <strong>承認済み</strong> : canShowApprovalDecisions(item, approvalStates[item.id]) ? <><span>人間確認が必要です</span><button type="button" disabled={busy} onClick={async () => { if (busy) return; setApproving(item.id); const result = await onApproveWorkItem?.(item.id, approvalStates[item.id].id); setApproving(null); setMessage(result?.ok ? "承認しました" : result?.message ?? "承認できませんでした"); }}>{approving === item.id ? "承認中…" : "承認する"}</button></> : approvalStates[item.id].state === "pending" ? <span>確認対象の記録を確認できないため、ここでは操作できません</span> : <span>承認待ちに戻る必要があります</span>}
                     </div>
                   ) : null}
-                  {onRejectOrRework && (approvalStates?.[item.id]?.state === "pending" || ["quality_check", "awaiting_approval", "preparation_recorded"].includes(item.status)) ? (
+                  {onRejectOrRework && canShowApprovalDecisions(item, approvalStates?.[item.id]) ? (
                     <div className={s.decisionActions}>
                       <p>承認しない場合は理由を入力してください。</p>
                       {decision?.itemId === item.id ? <><textarea disabled={busy} aria-label="却下・修正理由" value={decisionReason} onChange={event => setDecisionReason(event.target.value)} placeholder="理由（必須）" /><div><button type="button" disabled={busy || !hasCommandReason(decisionReason)} onClick={async () => { if (busy) return; setDeciding(true); const result = await onRejectOrRework(item.id, decision.mode, decisionReason); setDeciding(false); setMessage(result.ok ? (decision.mode === "reject" ? "却下しました" : "修正を依頼しました") : result.message); if (result.ok) { setDecision(null); setDecisionReason(""); } }}>{deciding ? "保存中…" : "確定"}</button><button type="button" disabled={busy} onClick={() => setDecision(null)}>キャンセル</button></div></> : <div>{approvalStates?.[item.id]?.state === "pending" ? <button type="button" disabled={busy} onClick={() => { setDecision({ itemId: item.id, mode: "reject" }); setDecisionReason(""); }}>承認しない</button> : null}<button type="button" disabled={busy} onClick={() => { setDecision({ itemId: item.id, mode: "rework" }); setDecisionReason(""); }}>修正を依頼</button></div>}

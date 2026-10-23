@@ -13,6 +13,7 @@ export type AgentWorkItemCard = {
   nextAction: string;
   isDemo: boolean;
   missingInfo: WorkItem["missingInfo"];
+  currentApprovalId: WorkItem["currentApprovalId"];
 };
 
 export type AgentWorkload = {
@@ -64,6 +65,7 @@ export function projectAgentWorkload(items: WorkItem[], agentId: string, now: st
       nextAction: item.nextAction?.label ?? "次の対応を確認する",
       isDemo: item.mode === "demo",
       missingInfo: item.missingInfo,
+      currentApprovalId: item.currentApprovalId,
     } satisfies AgentWorkItemCard;
   });
   return {
